@@ -68,6 +68,9 @@ public class Peer {
 
                 try {
 
+                    int pingId = dis.readInt() ;
+                    System.out.println("Received ping " + pingId) ;
+
                 } catch(Exception e) {
                     System.out.println(e) ;
                 }

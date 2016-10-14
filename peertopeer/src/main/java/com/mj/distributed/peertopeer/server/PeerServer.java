@@ -39,29 +39,21 @@ public class PeerServer {
             for (int s : seeds) {
 
                 InetAddress address = InetAddress.getLoopbackAddress() ;
-                Socket p = new Socket(InetAddress.getLoopbackAddress(), 5000 + s);
+                int port = 5000 + s ;
+                System.out.println("Connecting to port" +  port) ;
+                Socket p = new Socket(InetAddress.getLoopbackAddress(), port);
                 Peer peer = new Peer(p);
                 peer.start();
                 peers.add(peer);
 
             }
         }
+
+
+        Thread writerThread = new Thread(new ServerWriteRunnable()) ;
+        writerThread.start();
+
         accept() ;
-
-
-        while(true) {
-
-            try {
-                Thread.sleep(5000);
-
-                for(Peer p : peers) {
-                    p.ping(serverId);
-                }
-
-            } catch(Exception e) {
-                System.out.println(e) ;
-            }
-        }
 
 
     }
@@ -76,6 +68,7 @@ public class PeerServer {
 
             Socket client = s.accept() ;
             Peer p = new Peer(client) ;
+            peers.add(p) ;
             p.start();
 
         }
@@ -90,12 +83,12 @@ public class PeerServer {
 
         int serverId = Integer.parseInt(args[0]) ;
 
-        int size = args.length ;
+        int size = args.length   ;
 
         int[] seeds = null ;
 
         if (size > 1) {
-            seeds = new int[args.length] ;
+            seeds = new int[args.length-1] ;
             int j = 0 ;
             for (int i = 1 ; i < size ; i++) {
                 seeds[j] = Integer.parseInt(args[i]) ;
@@ -108,6 +101,31 @@ public class PeerServer {
         System.out.println("Starting server with serverId:" + serverId) ;
         PeerServer server = new PeerServer(serverId,seeds) ;
         server.start(seeds) ;
+    }
+
+
+    public class ServerWriteRunnable implements Runnable {
+
+
+        public void run() {
+
+            while(true) {
+
+                try {
+                    Thread.sleep(5000);
+
+                    for(Peer p : peers) {
+                        p.ping(serverId);
+                    }
+
+                } catch(Exception e) {
+                    System.out.println(e) ;
+                }
+            }
+
+        }
+
+
     }
 
 
