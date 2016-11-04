@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * Created by Manoj Khangaonkar on 10/5/2016.
@@ -16,18 +17,30 @@ import java.net.Socket;
 public class Peer {
 
     Socket peer ;
+    PeerServer peerServer ;
     DataOutputStream dos ;
+    Integer peerServerId = -1 ;
+
 
 
     private Peer() {
 
     }
 
-    public Peer(Socket s) {
+    public Peer(Socket s, PeerServer ps) {
 
         peer = s ;
+        peerServer = ps ;
 
     }
+
+    public Peer(Integer id, PeerServer ps) {
+
+        peerServerId = id ;
+        peerServer = ps ;
+
+    }
+
 
     public void start() {
 
@@ -53,7 +66,7 @@ public class Peer {
         dos.writeInt(i) ;
     }
 
-    public static class PeerReadRunnable implements Runnable {
+    public class PeerReadRunnable implements Runnable {
 
         DataInputStream dis ;
 
@@ -69,10 +82,16 @@ public class Peer {
                 try {
 
                     int pingId = dis.readInt() ;
+                    peerServerId = pingId ; // This is id of server this peer p
+                    peerServer.addPeer(Peer.this);
                     System.out.println("Received ping " + pingId) ;
 
-                } catch(Exception e) {
+                } catch(SocketException e) {
                     System.out.println(e) ;
+                    peerServer.removePeer(Peer.this) ;
+                    return ;
+                } catch(IOException ie) {
+                    System.out.println(ie) ;
                 }
 
             }
@@ -82,5 +101,32 @@ public class Peer {
 
     }
 
+    @Override
+    public boolean equals(Object obj) {
+
+        if (null == obj) {
+            return false ;
+        }
+
+        if (! (obj instanceof Peer) ) {
+            return false ;
+        }
+
+        return peerServerId.equals(((Peer) obj).peerServerId) ;
+
+    }
+
+    @Override
+    public int hashCode() {
+        return peerServerId.hashCode() ;
+    }
+
+    public int getPeerServerId() {
+        return peerServerId ;
+    }
+
+    public boolean isRemotePeer() {
+        return peer != null ;
+    }
 
 }
