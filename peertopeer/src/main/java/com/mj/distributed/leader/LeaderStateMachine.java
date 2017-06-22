@@ -5,6 +5,7 @@ public class LeaderStateMachine {
 
     public enum MemberState {
         LEADER,
+        CANDIDATE,
         FOLLOWER
     }
 

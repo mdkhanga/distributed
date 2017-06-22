@@ -1,5 +1,8 @@
 package com.mj.distributed.peertopeer.server;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -18,6 +21,8 @@ public class PeerServer {
     private Set<Peer> peerSet = new HashSet<Peer>();
     private int[] seeds ;
     // List<Peer> peers = new ArrayList<Peer>();
+
+    private Logger LOG  = LogManager.getLogger(PeerServer.class) ;
 
     public PeerServer(int id,int[] seed) {
 
@@ -46,7 +51,8 @@ public class PeerServer {
 
                 InetAddress address = InetAddress.getLoopbackAddress() ;
                 int port = 5000 + s ;
-                System.out.println("Connecting to port" +  port) ;
+                // System.out.println("Connecting to port" +  port) ;
+                LOG.info("Connecting to port" + port) ;
                 Socket p = new Socket(InetAddress.getLoopbackAddress(), port);
                 Peer peer = new Peer(p,this);
                 peer.start();
@@ -66,7 +72,8 @@ public class PeerServer {
     public void accept() throws IOException {
 
         int port = 5000+serverId ;
-        System.out.println("Server :"+serverId + " listening on port :" + port) ;
+        // System.out.println("Server :"+serverId + " listening on port :" + port) ;
+        LOG.info("Server :" + serverId + " listening on port :" + port) ;
         ServerSocket s = new ServerSocket(port) ;
 
         while (true) {
@@ -104,6 +111,8 @@ public class PeerServer {
         }
 
         System.out.println("Starting server with serverId:" + serverId) ;
+
+
         PeerServer server = new PeerServer(serverId,seeds) ;
         server.start(seeds) ;
     }
@@ -170,7 +179,8 @@ public class PeerServer {
 
         sb.append("]") ;
 
-        System.out.println(sb) ;
+        // System.out.println(sb) ;
+        LOG.info(sb) ;
 
     }
 }

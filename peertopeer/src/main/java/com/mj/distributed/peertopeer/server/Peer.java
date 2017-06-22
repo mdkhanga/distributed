@@ -2,6 +2,9 @@ package com.mj.distributed.peertopeer.server;
 
 
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -21,7 +24,7 @@ public class Peer {
     DataOutputStream dos ;
     Integer peerServerId = -1 ;
 
-
+    Logger LOG  = LogManager.getLogger(Peer.class) ;
 
     private Peer() {
 
@@ -84,15 +87,16 @@ public class Peer {
                     int pingId = dis.readInt() ;
                     peerServerId = pingId ; // This is id of server this peer p
                     peerServer.addPeer(Peer.this);
-                    System.out.println("Received ping " + pingId) ;
+                    // System.out.println("Received ping " + pingId) ;.
+                    LOG.info("Received ping " + pingId) ;
 
-                } catch(SocketException e) {
+                } catch(IOException e) {
                     System.out.println(e) ;
                     peerServer.removePeer(Peer.this) ;
                     return ;
-                } catch(IOException ie) {
+                } /*catch(IOException ie) {
                     System.out.println(ie) ;
-                }
+                } */
 
             }
 
