@@ -7,24 +7,33 @@ import java.io.IOException;
 /**
  * Created by manoj on 6/18/17.
  */
-public class PingMessage implements Message {
+public class PingMessage extends AbstractMessage {
 
-    private static long messageId = 1L ;
+    private static int messageTypeId = 1 ;
     private int serverId ;
 
-    public long getMessageId() {
-        return messageId ;
+    public long getMessageTypeId() {
+        return messageTypeId ;
+    }
+
+    public PingMessage() {
+
+    }
+
+    public PingMessage(int id) {
+        serverId = id ;
     }
 
     public void serialize(DataOutputStream out) throws IOException {
-        out.writeLong(messageId) ;
+        out.writeInt(messageTypeId) ;
+        out.writeLong(getMessageId());
         out.writeInt(serverId) ;
-    }
+     }
 
-    public Message deserialize(DataInputStream in) throws IOException {
+    public void deserialize(DataInputStream in) throws IOException {
+        messageId = in.readLong() ;
         serverId = in.readInt() ;
-        PingMessage message = new PingMessage() ;
-        return message ;
+
     }
 
     public int getServerId() {
@@ -33,5 +42,10 @@ public class PingMessage implements Message {
 
     public void setServerId(int id) {
         serverId = id ;
+    }
+
+    public String print() {
+
+        return "Ping message from server :" + serverId ;
     }
 }

@@ -2,6 +2,9 @@ package com.mj.distributed.peertopeer.server;
 
 
 
+import com.mj.distributed.message.Message;
+import com.mj.distributed.message.MessageFactory;
+import com.mj.distributed.message.PingMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,6 +14,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -19,12 +23,15 @@ import java.net.SocketException;
  */
 public class Peer {
 
-    Socket peer ;
-    PeerServer peerServer ;
-    DataOutputStream dos ;
-    Integer peerServerId = -1 ;
+    Socket peer;
+    PeerServer peerServer;
+    DataOutputStream dos;
+    Integer peerServerId = -1;
+    int remotePort; // port returned remote initiates the connection - other end of socket after our accept
+    int remoteListenPort ; // if we initate connection, this is where we connect to
+    InetAddress remoteIpAddress;
 
-    Logger LOG  = LogManager.getLogger(Peer.class) ;
+    Logger LOG = LogManager.getLogger(Peer.class);
 
     private Peer() {
 
@@ -32,15 +39,18 @@ public class Peer {
 
     public Peer(Socket s, PeerServer ps) {
 
-        peer = s ;
-        peerServer = ps ;
+        peer = s;
+        peerServer = ps;
+        remoteIpAddress = s.getInetAddress();
+        remotePort = s.getPort();
+
 
     }
 
     public Peer(Integer id, PeerServer ps) {
 
-        peerServerId = id ;
-        peerServer = ps ;
+        peerServerId = id;
+        peerServer = ps;
 
     }
 
@@ -50,53 +60,70 @@ public class Peer {
         try {
 
             InputStream is = peer.getInputStream();
-            OutputStream os = peer.getOutputStream() ;
+            OutputStream os = peer.getOutputStream();
 
-            PeerReadRunnable pr = new PeerReadRunnable(is) ;
+            PeerReadRunnable pr = new PeerReadRunnable(is);
 
-            Thread t = new Thread(pr) ;
+            Thread t = new Thread(pr);
             t.start();
 
-            dos = new DataOutputStream(os) ;
+            dos = new DataOutputStream(os);
 
 
-        } catch(IOException e) {
-            System.out.println(e) ;
+        } catch (IOException e) {
+            System.out.println(e);
         }
     }
 
     public void ping(int i) throws IOException {
-        dos.writeInt(i) ;
+        PingMessage pingMessage = new PingMessage(i);
+        pingMessage.serialize(dos);
+        // dos.writeInt(i) ;
     }
+
+    public void sendMessage(Message m) {
+
+        // message needs to be queue and sent by a writer thread
+    }
+
 
     public class PeerReadRunnable implements Runnable {
 
-        DataInputStream dis ;
+        DataInputStream dis;
 
         PeerReadRunnable(InputStream i) {
 
-            dis = new DataInputStream(i) ;
+            dis = new DataInputStream(i);
         }
 
         public void run() {
 
-            while(true) {
+            while (true) {
 
                 try {
 
+                    int messageId = dis.readInt();
+                    Message m = MessageFactory.deserialize(messageId, dis);
+                    /*
                     int pingId = dis.readInt() ;
                     peerServerId = pingId ; // This is id of server this peer p
                     peerServer.addPeer(Peer.this);
-                    // System.out.println("Received ping " + pingId) ;.
-                    LOG.info("Received ping " + pingId) ;
+                    LOG.info("Received ping " + pingId) ; */
+                    if (m instanceof PingMessage) {
 
-                } catch(IOException e) {
-                    System.out.println(e) ;
-                    peerServer.removePeer(Peer.this) ;
-                    return ;
-                } /*catch(IOException ie) {
-                    System.out.println(ie) ;
-                } */
+                        peerServerId = ((PingMessage) m).getServerId();
+
+                    }
+
+                    LOG.info("From :" + remoteIpAddress.toString() + ":" + remotePort + "Recieved message :" + m.print());
+                    peerServer.addPeer(Peer.this);
+
+                } catch (IOException e) {
+                    System.out.println(e);
+                    peerServer.removePeer(Peer.this);
+                    return;
+                }
+
 
             }
 
@@ -109,28 +136,28 @@ public class Peer {
     public boolean equals(Object obj) {
 
         if (null == obj) {
-            return false ;
+            return false;
         }
 
-        if (! (obj instanceof Peer) ) {
-            return false ;
+        if (!(obj instanceof Peer)) {
+            return false;
         }
 
-        return peerServerId.equals(((Peer) obj).peerServerId) ;
+        return peerServerId.equals(((Peer) obj).peerServerId);
 
     }
 
     @Override
     public int hashCode() {
-        return peerServerId.hashCode() ;
+        return peerServerId.hashCode();
     }
 
-    public int getPeerServerId() {
-        return peerServerId ;
+    public String getPeerServer() {
+        return remoteIpAddress.toString()+":"+remoteListenPort;
     }
 
     public boolean isRemotePeer() {
-        return peer != null ;
+        return peer != null;
     }
 
 }

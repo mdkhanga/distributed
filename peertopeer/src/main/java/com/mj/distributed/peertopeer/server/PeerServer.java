@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,21 +20,21 @@ public class PeerServer {
     private int serverId ;
     private boolean leader ;
     private Set<Peer> peerSet = new HashSet<Peer>();
-    private int[] seeds ;
+    // private int[] seeds ;
     // List<Peer> peers = new ArrayList<Peer>();
 
     private Logger LOG  = LogManager.getLogger(PeerServer.class) ;
 
-    public PeerServer(int id,int[] seed) {
+    public PeerServer(int id) {
 
         serverId = id ;
         if (id == 1) {
             leader = true ;
         }
-        seeds = seed ;
+        // seeds = seed ;
     }
 
-    public void start(int[] seed) throws IOException {
+    public void start(String[] seed) throws IOException {
 
 
 
@@ -43,17 +44,18 @@ public class PeerServer {
 
         }
 
-        Peer thisServer = new Peer(serverId,this) ;
-        peerSet.add(thisServer) ;
+        // Peer thisServer = new Peer(serverId,this) ;
+        // peerSet.add(thisServer) ;
 
         if (seed != null) {
-            for (int s : seeds) {
+            for (String s : seed) {
 
-                InetAddress address = InetAddress.getLoopbackAddress() ;
-                int port = 5000 + s ;
+                // InetAddress address = InetAddress.getLoopbackAddress() ;
+                String[] remoteaddrAndPort = s.split(":") ;
+                // int port = 5000 + s ;
                 // System.out.println("Connecting to port" +  port) ;
-                LOG.info("Connecting to port" + port) ;
-                Socket p = new Socket(InetAddress.getLoopbackAddress(), port);
+                LOG.info("Connecting to " + seed) ;
+                Socket p = new Socket(remoteaddrAndPort[0], Integer.parseInt(remoteaddrAndPort[1]));
                 Peer peer = new Peer(p,this);
                 peer.start();
 
@@ -97,13 +99,13 @@ public class PeerServer {
 
         int size = args.length   ;
 
-        int[] seeds = null ;
+        String[] seeds = null ;
 
         if (size > 1) {
-            seeds = new int[args.length-1] ;
+            seeds = new String[args.length-1] ;
             int j = 0 ;
             for (int i = 1 ; i < size ; i++) {
-                seeds[j] = Integer.parseInt(args[i]) ;
+                seeds[j] = args[i] ;
                 ++j ;
             }
 
@@ -113,7 +115,7 @@ public class PeerServer {
         System.out.println("Starting server with serverId:" + serverId) ;
 
 
-        PeerServer server = new PeerServer(serverId,seeds) ;
+        PeerServer server = new PeerServer(serverId) ;
         server.start(seeds) ;
     }
 
@@ -127,8 +129,6 @@ public class PeerServer {
 
                 try {
                     Thread.sleep(5000);
-
-
 
 
                     for(Peer p : peerSet) {
@@ -173,7 +173,7 @@ public class PeerServer {
         StringBuilder sb = new StringBuilder("Cluster members [") ;
         for(Peer p : peerSet) {
 
-            sb.append(p.getPeerServerId()) ;
+            sb.append(p.getPeerServer()) ;
             sb.append(",") ;
         }
 
@@ -183,4 +183,12 @@ public class PeerServer {
         LOG.info(sb) ;
 
     }
+
+    public void consumeMessage(Message message) {
+
+
+    }
+
+
+
 }
