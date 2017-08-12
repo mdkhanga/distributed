@@ -78,7 +78,7 @@ public class Peer {
     public void ping(int i) throws IOException {
         PingMessage pingMessage = new PingMessage(i);
         pingMessage.serialize(dos);
-        // dos.writeInt(i) ;
+
     }
 
     public void sendMessage(Message m) {
@@ -104,11 +104,7 @@ public class Peer {
 
                     int messageId = dis.readInt();
                     Message m = MessageFactory.deserialize(messageId, dis);
-                    /*
-                    int pingId = dis.readInt() ;
-                    peerServerId = pingId ; // This is id of server this peer p
-                    peerServer.addPeer(Peer.this);
-                    LOG.info("Received ping " + pingId) ; */
+
                     if (m instanceof PingMessage) {
 
                         peerServerId = ((PingMessage) m).getServerId();

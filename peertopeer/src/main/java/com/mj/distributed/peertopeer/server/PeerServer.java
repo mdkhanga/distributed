@@ -74,7 +74,6 @@ public class PeerServer {
     public void accept() throws IOException {
 
         int port = 5000+serverId ;
-        // System.out.println("Server :"+serverId + " listening on port :" + port) ;
         LOG.info("Server :" + serverId + " listening on port :" + port) ;
         ServerSocket s = new ServerSocket(port) ;
 
