@@ -5,9 +5,9 @@ package com.mj.distributed.peertopeer.server;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.message.MessageFactory;
 import com.mj.distributed.message.PingMessage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
+import org.slf4j.LoggerFactory ;
+import org.slf4j.Logger ;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -31,7 +31,7 @@ public class Peer {
     int remoteListenPort ; // if we initate connection, this is where we connect to
     InetAddress remoteIpAddress;
 
-    Logger LOG = LogManager.getLogger(Peer.class);
+    Logger LOG = LoggerFactory.getLogger(Peer.class);
 
     private Peer() {
 

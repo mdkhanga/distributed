@@ -1,8 +1,8 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.Message;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -23,7 +23,7 @@ public class PeerServer {
     // private int[] seeds ;
     // List<Peer> peers = new ArrayList<Peer>();
 
-    private Logger LOG  = LogManager.getLogger(PeerServer.class) ;
+    private Logger LOG  = LoggerFactory.getLogger(PeerServer.class) ;
 
     public PeerServer(int id) {
 
@@ -179,7 +179,7 @@ public class PeerServer {
         sb.append("]") ;
 
         // System.out.println(sb) ;
-        LOG.info(sb) ;
+        LOG.info(sb.toString()) ;
 
     }
 
