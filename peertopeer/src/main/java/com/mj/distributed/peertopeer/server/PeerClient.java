@@ -86,7 +86,7 @@ public class PeerClient {
 
             selector.select() ;
 
-            System.out.println(i) ;
+            // System.out.println(i) ;
 
             Iterator<SelectionKey> skeys = selector.selectedKeys().iterator() ;
 
@@ -98,7 +98,7 @@ public class PeerClient {
                     continue;
                 }
 
-                System.out.println("We have a valid key") ;
+                // System.out.println("We have a valid key") ;
                 // Check what event is available and deal with it
                 if (key.isConnectable()) {
                     finishConnection(key);
@@ -131,7 +131,7 @@ public class PeerClient {
 
     private void write(SelectionKey key) throws IOException {
 
-        System.out.println("In write") ;
+        // System.out.println("In write") ;
 
         // String toWrite = writeQueue.pollFirst() ;
 
@@ -139,7 +139,7 @@ public class PeerClient {
 
         if (toWrite != null) {
 
-            System.out.println("writing :" + toWrite) ;
+           // System.out.println("writing :" + toWrite) ;
 
             ByteBuffer b ;
             b = ByteBuffer.wrap(toWrite.getBytes()) ;
@@ -162,15 +162,15 @@ public class PeerClient {
 
     public void read(SelectionKey key) throws IOException {
 
-        System.out.println("In read") ;
+        // System.out.println("In read") ;
 
         readBuf.clear() ;
 
         while (true) {
-            // readBuffer.clear();
-            System.out.println("before read") ;
+
+            // System.out.println("before read") ;
             int numread = clientChannel.read( readBuf );
-            System.out.println("after read") ;
+            // System.out.println("after read") ;
 
 
             if (numread <=0) {

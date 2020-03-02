@@ -12,12 +12,13 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.nio.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
 
@@ -26,9 +27,15 @@ public class PeerServer {
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
     // private int[] seeds ;
     // List<PeerClient> peers = new ArrayList<PeerClient>();
-    private HashMap<SocketChannel,ByteBuffer> queuedWrites = new HashMap<SocketChannel,ByteBuffer>() ;
+    // private HashMap<SocketChannel,ByteBuffer> queuedWrites = new HashMap<SocketChannel,ByteBuffer>() ;
+    private HashMap<SocketChannel,AtomicInteger> queuedWrites = new HashMap<SocketChannel,AtomicInteger>() ;
+
+    Integer x = 0 ;
 
     private Logger LOG  = LoggerFactory.getLogger(PeerServer.class) ;
+
+    private String bindHost = "localhost" ;
+    private int bindPort ;
 
     Selector selector ;
 
@@ -79,33 +86,22 @@ public class PeerServer {
 
     public void accept() throws IOException {
 
-        int port = 5000+serverId ;
-        LOG.info("Server :" + serverId + " listening on port :" + port) ;
+        bindPort = 5000+serverId ;
+        LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
         // ServerSocket s = new ServerSocket(port) ;
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
         serverSocketChannel.configureBlocking(false) ;
 
-        serverSocketChannel.socket().bind(new InetSocketAddress("localhost",port));
+        serverSocketChannel.socket().bind(new InetSocketAddress("localhost",bindPort));
 
          selector = Selector.open();
 
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT) ;
 
 
-        /*
-        while (true) {
+         try {
 
-            Socket client = s.accept() ;
-            PeerClient p = new PeerClient(client,this) ;
-            p.start();
-            p.ping(serverId) ;
-
-        }
-        */
-
-        try {
-
-            int x = 0 ;
+           // int x = 0 ;
 
             while (true) {
 
@@ -113,7 +109,7 @@ public class PeerServer {
                     queuedWrites.forEach((k, v) -> {
 
                         try {
-                            Thread.sleep(2000);
+                            // Thread.sleep(2000);
                             k.register(selector, SelectionKey.OP_WRITE);
                             // selector.wakeup();
                         } catch (Exception e) {
@@ -122,6 +118,9 @@ public class PeerServer {
 
                     });
 
+                    synchronized (x) {
+                        x = 0;
+                    }
                 }
 
                 selector.select();
@@ -140,8 +139,8 @@ public class PeerServer {
                         SocketChannel sc = ssc.accept();
                         sc.configureBlocking(false);
 
-                        queuedWrites.put(sc,ByteBuffer.wrap(("ping from server "+serverId).getBytes())) ;
-                        x = 1 ;
+                        // queuedWrites.put(sc,ByteBuffer.wrap(("ping from server "+serverId).getBytes())) ;
+                        queuedWrites.put(sc,new AtomicInteger(0)) ;
 
                         sc.register(selector, SelectionKey.OP_READ);
 
@@ -174,25 +173,29 @@ public class PeerServer {
 
                         System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
 
-                        readBuffer.flip();
-                        queuedWrites.put(sc, readBuffer);
+                        // readBuffer.flip();
+                        // queuedWrites.put(sc, readBuffer);
                         key.interestOps(SelectionKey.OP_WRITE);
 
                     } else if (key.isWritable()) {
 
                         SocketChannel sc = (SocketChannel) key.channel();
 
-                        ByteBuffer towrite = queuedWrites.get(sc);
+                        AtomicInteger i = queuedWrites.get(sc) ;
+
+                        String stowrite = "ping " + i.get() + " from server " + serverId ;
 
 
-                        System.out.println("Sending ping :" + new String(towrite.array()));
+                        // System.out.println("Sending ping :" + stowrite);
+
+                        ByteBuffer towrite = ByteBuffer.wrap(stowrite.getBytes()) ;
 
                         towrite.rewind() ;
 
                         while (true) {
                             int n = sc.write(towrite);
 
-                            System.out.println("Num of bytes writeen "+ n) ;
+                            // System.out.println("Num of bytes writeen "+ n) ;
 
                             if (n == 0 || towrite.remaining() == 0)
                                 break;
@@ -252,34 +255,25 @@ public class PeerServer {
             while(true) {
 
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
 
-                    /*
-                    for(PeerClient p : peerSet) {
-
-                        try {
-                            // if (p.isRemotePeer()) {
-                                p.ping(serverId);
-                            // }
-                        } catch(SocketException e) {
-                            removePeer(p);
-                            System.out.println("Server "+p.peerServerId + " is gone") ;
-                        }
-                    } */
-
-                    /*
                     queuedWrites.forEach((k,v)->{
 
                         try {
-                            k.register(selector, SelectionKey.OP_WRITE);
-                            selector.wakeup() ;
+                            v.incrementAndGet() ;
                         } catch(Exception e) {
                             LOG.error("error" ,e) ;
                         }
 
                     });
 
-                    */
+                    synchronized (x) {
+                        x =1 ;
+                    }
+
+                    selector.wakeup() ;
+
+
 
                     logCluster();
 
@@ -297,23 +291,36 @@ public class PeerServer {
     public void addPeer(PeerClient p) {
         if (!peerSet.contains(p)) {
             peerSet.add(p);
-            logCluster();
+            // logCluster();
         }
     }
 
     public void removePeer(PeerClient p) {
         peerSet.remove(p) ;
-        logCluster();
+        // logCluster();
     }
 
-    public void logCluster() {
+    public void logCluster() throws Exception {
 
-        StringBuilder sb = new StringBuilder("Cluster members [") ;
-        for(PeerClient p : peerSet) {
+        StringBuilder sb = new StringBuilder("Cluster members ["+bindHost+":"+bindPort+",") ;
 
-            sb.append(p.getPeerServer()) ;
-            sb.append(",") ;
-        }
+        queuedWrites.forEach((k,v)->{
+
+            try {
+                InetSocketAddress inetaddr = (InetSocketAddress) k.getRemoteAddress();
+
+
+                sb.append(inetaddr.getHostString()) ;
+                sb.append(":") ;
+                sb.append(inetaddr.getPort()) ;
+                sb.append(",") ;
+
+
+            } catch(Exception e) {
+                LOG.error("Error getting remote address ",e) ;
+            }
+
+        });
 
         sb.append("]") ;
 
