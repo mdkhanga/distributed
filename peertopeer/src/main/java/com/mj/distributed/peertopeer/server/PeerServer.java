@@ -150,9 +150,9 @@ public class PeerServer {
                         ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
                         int numread;
-                        while (true) {
+                        numread = sc.read(readBuffer);
+                        while (numread > 0) {
                             // readBuffer.clear();
-
                             numread = sc.read(readBuffer);
 
                             if (numread <= 0) {
@@ -173,8 +173,6 @@ public class PeerServer {
 
                         System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
 
-                        // readBuffer.flip();
-                        // queuedWrites.put(sc, readBuffer);
                         key.interestOps(SelectionKey.OP_WRITE);
 
                     } else if (key.isWritable()) {
@@ -192,13 +190,11 @@ public class PeerServer {
 
                         towrite.rewind() ;
 
-                        while (true) {
-                            int n = sc.write(towrite);
+                        int n = sc.write(towrite);
+                        while (n > 0 && towrite.remaining() > 0) {
+                            n = sc.write(towrite);
 
-                            // System.out.println("Num of bytes writeen "+ n) ;
-
-                            if (n == 0 || towrite.remaining() == 0)
-                                break;
+                           
                         }
 
                         key.interestOps(SelectionKey.OP_READ);
@@ -214,6 +210,11 @@ public class PeerServer {
             LOG.error("Exception :",e) ;
         }
 
+    }
+
+    private void read(SelectionKey key) {
+
+        
     }
 
     public static void main(String args[]) throws Exception {

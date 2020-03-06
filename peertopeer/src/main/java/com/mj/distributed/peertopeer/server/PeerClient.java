@@ -146,13 +146,11 @@ public class PeerClient {
 
             // b.flip();
 
-            while (true) {
-                int n = clientChannel.write(b) ;
+            int n = clientChannel.write(b) ;
+            while (n > 0 && b.remaining() > 0) {
+                n = clientChannel.write(b) ;
 
 
-
-                if (n == 0 || b.remaining() == 0)
-                    break ;
             }
 
         }
@@ -166,10 +164,11 @@ public class PeerClient {
 
         readBuf.clear() ;
 
-        while (true) {
+        int numread = clientChannel.read( readBuf );
+        while (numread > 0) {
 
             // System.out.println("before read") ;
-            int numread = clientChannel.read( readBuf );
+            numread = clientChannel.read( readBuf );
             // System.out.println("after read") ;
 
 
@@ -182,6 +181,11 @@ public class PeerClient {
 
         System.out.println("Read from server:" + new String(readBuf.array())) ;
 
+        if (numread < 0) {
+
+            clientChannel.close();
+            key.cancel();
+        }
 
         // key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ) ;
 
