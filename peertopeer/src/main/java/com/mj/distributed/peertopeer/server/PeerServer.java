@@ -135,6 +135,8 @@ public class PeerServer {
 
                     if (key.isAcceptable()) {
 
+                        accept(key) ;
+                        /*
                         ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
                         SocketChannel sc = ssc.accept();
                         sc.configureBlocking(false);
@@ -143,9 +145,12 @@ public class PeerServer {
                         queuedWrites.put(sc,new AtomicInteger(0)) ;
 
                         sc.register(selector, SelectionKey.OP_READ);
+                        */
 
                     } else if (key.isReadable()) {
 
+                        read(key) ;
+                        /*
                         SocketChannel sc = (SocketChannel) key.channel();
                         ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
@@ -174,9 +179,13 @@ public class PeerServer {
                         System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
 
                         key.interestOps(SelectionKey.OP_WRITE);
+                        */
 
                     } else if (key.isWritable()) {
 
+                        write(key) ;
+
+                        /*
                         SocketChannel sc = (SocketChannel) key.channel();
 
                         AtomicInteger i = queuedWrites.get(sc) ;
@@ -197,7 +206,7 @@ public class PeerServer {
                            
                         }
 
-                        key.interestOps(SelectionKey.OP_READ);
+                        key.interestOps(SelectionKey.OP_READ); */
                     }
 
 
@@ -212,9 +221,76 @@ public class PeerServer {
 
     }
 
-    private void read(SelectionKey key) {
+    private void accept(SelectionKey key) throws IOException {
 
-        
+        ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
+        SocketChannel sc = ssc.accept();
+        sc.configureBlocking(false);
+
+        // queuedWrites.put(sc,ByteBuffer.wrap(("ping from server "+serverId).getBytes())) ;
+        queuedWrites.put(sc,new AtomicInteger(0)) ;
+
+
+    }
+
+    private void read(SelectionKey key) throws IOException {
+
+        SocketChannel sc = (SocketChannel) key.channel();
+        ByteBuffer readBuffer = ByteBuffer.allocate(8192);
+
+        int numread;
+        numread = sc.read(readBuffer);
+        while (numread > 0) {
+            // readBuffer.clear();
+            numread = sc.read(readBuffer);
+
+            if (numread <= 0) {
+                break;
+            }
+
+
+        }
+
+        if (numread == -1) {
+            // Remote entity shut the socket down cleanly. Do the
+            // same from our end and cancel the channel.
+            key.channel().close();
+            key.cancel();
+
+        }
+
+
+        System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
+
+        key.interestOps(SelectionKey.OP_WRITE);
+
+
+    }
+
+    private void write(SelectionKey key) throws IOException {
+
+        SocketChannel sc = (SocketChannel) key.channel();
+
+        AtomicInteger i = queuedWrites.get(sc) ;
+
+        String stowrite = "ping " + i.get() + " from server " + serverId ;
+
+
+        // System.out.println("Sending ping :" + stowrite);
+
+        ByteBuffer towrite = ByteBuffer.wrap(stowrite.getBytes()) ;
+
+        towrite.rewind() ;
+
+        int n = sc.write(towrite);
+        while (n > 0 && towrite.remaining() > 0) {
+            n = sc.write(towrite);
+
+
+        }
+
+        key.interestOps(SelectionKey.OP_READ);
+
     }
 
     public static void main(String args[]) throws Exception {
