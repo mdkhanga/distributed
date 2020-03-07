@@ -2,6 +2,7 @@ package com.mj.distributed.peertopeer.server;
 
 
 
+import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.message.MessageFactory;
 import com.mj.distributed.message.PingMessage;
@@ -42,7 +43,7 @@ public class PeerClient {
     String remoteHost ;
     SocketChannel clientChannel ;
 
-    public Deque<String> writeQueue = new ArrayDeque<String>() ;
+    public Deque<ByteBuffer> writeQueue = new ArrayDeque<ByteBuffer>() ;
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192) ;
 
@@ -54,10 +55,11 @@ public class PeerClient {
 
     }
 
-    public PeerClient(String host, int port) {
+    public PeerClient(String host, int port, PeerServer p) {
 
        this.remoteHost = host ;
        this.remotePort = port ;
+       this.peerServer = p ;
 
 
     }
@@ -78,7 +80,9 @@ public class PeerClient {
 
         int i = 0 ;
 
-        writeQueue.add("Hello from " + remoteHost + ":" + remotePort) ;
+        // writeQueue.add("Hello from " + remoteHost + ":" + remotePort) ;
+        HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
+        writeQueue.addLast(m.serialize());
 
         while(true) {
 
@@ -131,29 +135,30 @@ public class PeerClient {
 
     private void write(SelectionKey key) throws IOException {
 
-        // System.out.println("In write") ;
 
-        // String toWrite = writeQueue.pollFirst() ;
+        // String toWrite = "Hello from 5002" ;
 
-        String toWrite = "Hello from 5002" ;
+        // if (toWrite != null) {
 
-        if (toWrite != null) {
 
-           // System.out.println("writing :" + toWrite) ;
 
             ByteBuffer b ;
-            b = ByteBuffer.wrap(toWrite.getBytes()) ;
+            // b = ByteBuffer.wrap(toWrite.getBytes()) ;
+            b = writeQueue.getFirst() ;
 
-            // b.flip();
+
 
             int n = clientChannel.write(b) ;
+            int totalbyteswritten = n ;
             while (n > 0 && b.remaining() > 0) {
                 n = clientChannel.write(b) ;
-
+                totalbyteswritten = totalbyteswritten + n ;
 
             }
 
-        }
+            LOG.info("Wrote to channel " + totalbyteswritten) ;
+
+        // }
 
         key.interestOps(SelectionKey.OP_READ) ;
     }

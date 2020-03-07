@@ -42,6 +42,7 @@ public class PeerServer {
     public PeerServer(int id) {
 
         serverId = id ;
+        bindPort = 5000+serverId ;
         if (id == 1) {
             leader = true ;
         }
@@ -69,7 +70,7 @@ public class PeerServer {
 
                 LOG.info("Connecting to " + seed) ;
                 // Socket p = new Socket(remoteaddrAndPort[0], Integer.parseInt(remoteaddrAndPort[1]));
-                PeerClient peer = new PeerClient(remoteaddrAndPort[0],Integer.parseInt(remoteaddrAndPort[1]));
+                PeerClient peer = new PeerClient(remoteaddrAndPort[0],Integer.parseInt(remoteaddrAndPort[1]),this);
                 peer.start();
 
             }
@@ -84,9 +85,17 @@ public class PeerServer {
 
     }
 
+    public String getBindHost() {
+        return bindHost ;
+    }
+
+    public int getBindPort() {
+        return bindPort ;
+    }
+
     public void accept() throws IOException {
 
-        bindPort = 5000+serverId ;
+
         LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
         // ServerSocket s = new ServerSocket(port) ;
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
@@ -260,7 +269,28 @@ public class PeerServer {
         }
 
 
-        System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
+        // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
+        readBuffer.rewind() ;
+        int messagesize = readBuffer.getInt() ;
+        LOG.info("Received message of size " + messagesize) ;
+        int messageType = readBuffer.getInt() ;
+        if (messageType == 1) {
+
+            LOG.info("Received a hello message") ;
+        }
+
+        int greetingSize = readBuffer.getInt() ;
+        byte[] greetingBytes = new byte[greetingSize] ;
+        readBuffer.get(greetingBytes,0,greetingSize) ;
+        LOG.info("text greeing "+new String(greetingBytes)) ;
+
+
+        int hostStringSize = readBuffer.getInt() ;
+        byte[] hostStringBytes = new byte[hostStringSize] ;
+        readBuffer.get(hostStringBytes,0,hostStringSize) ;
+        LOG.info("from host "+new String(hostStringBytes)) ;
+
+        LOG.info("and port "+readBuffer.getInt()) ;
 
         key.interestOps(SelectionKey.OP_WRITE);
 
