@@ -235,11 +235,11 @@ public class PeerClient {
                     }
 
                     LOG.info("From :" + remoteIpAddress.toString() + ":" + remotePort + "Recieved message :" + m.print());
-                    peerServer.addPeer(PeerClient.this);
+                    // peerServer.addPeer(PeerClient.this);
 
                 } catch (IOException e) {
                     System.out.println(e);
-                    peerServer.removePeer(PeerClient.this);
+                    // peerServer.removePeer(PeerClient.this);
                     return;
                 }
 

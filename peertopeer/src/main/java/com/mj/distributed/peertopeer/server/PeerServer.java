@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.Message;
+import com.mj.distributed.model.Member;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +19,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
@@ -30,6 +32,8 @@ public class PeerServer {
     // private HashMap<SocketChannel,ByteBuffer> queuedWrites = new HashMap<SocketChannel,ByteBuffer>() ;
     private HashMap<SocketChannel,AtomicInteger> queuedWrites = new HashMap<SocketChannel,AtomicInteger>() ;
 
+    private ConcurrentHashMap<Member,String> members = new ConcurrentHashMap<>() ;
+
     Integer x = 0 ;
 
     private Logger LOG  = LoggerFactory.getLogger(PeerServer.class) ;
@@ -39,6 +43,8 @@ public class PeerServer {
 
     Selector selector ;
 
+    InBoundMessageCreator inBoundMessageCreator  ;
+
     public PeerServer(int id) {
 
         serverId = id ;
@@ -46,6 +52,8 @@ public class PeerServer {
         if (id == 1) {
             leader = true ;
         }
+
+        inBoundMessageCreator = new InBoundMessageCreator(this) ;
         // seeds = seed ;
     }
 
@@ -97,6 +105,8 @@ public class PeerServer {
 
 
         LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
+
+        members.put(new Member(bindHost,bindPort),"") ;
         // ServerSocket s = new ServerSocket(port) ;
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
         serverSocketChannel.configureBlocking(false) ;
@@ -145,77 +155,18 @@ public class PeerServer {
                     if (key.isAcceptable()) {
 
                         accept(key) ;
-                        /*
-                        ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-                        SocketChannel sc = ssc.accept();
-                        sc.configureBlocking(false);
 
-                        // queuedWrites.put(sc,ByteBuffer.wrap(("ping from server "+serverId).getBytes())) ;
-                        queuedWrites.put(sc,new AtomicInteger(0)) ;
-
-                        sc.register(selector, SelectionKey.OP_READ);
-                        */
 
                     } else if (key.isReadable()) {
 
                         read(key) ;
-                        /*
-                        SocketChannel sc = (SocketChannel) key.channel();
-                        ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
-                        int numread;
-                        numread = sc.read(readBuffer);
-                        while (numread > 0) {
-                            // readBuffer.clear();
-                            numread = sc.read(readBuffer);
-
-                            if (numread <= 0) {
-                                break;
-                            }
-
-
-                        }
-
-                        if (numread == -1) {
-                            // Remote entity shut the socket down cleanly. Do the
-                            // same from our end and cancel the channel.
-                            key.channel().close();
-                            key.cancel();
-                            continue;
-                        }
-
-
-                        System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
-
-                        key.interestOps(SelectionKey.OP_WRITE);
-                        */
 
                     } else if (key.isWritable()) {
 
                         write(key) ;
 
-                        /*
-                        SocketChannel sc = (SocketChannel) key.channel();
 
-                        AtomicInteger i = queuedWrites.get(sc) ;
-
-                        String stowrite = "ping " + i.get() + " from server " + serverId ;
-
-
-                        // System.out.println("Sending ping :" + stowrite);
-
-                        ByteBuffer towrite = ByteBuffer.wrap(stowrite.getBytes()) ;
-
-                        towrite.rewind() ;
-
-                        int n = sc.write(towrite);
-                        while (n > 0 && towrite.remaining() > 0) {
-                            n = sc.write(towrite);
-
-                           
-                        }
-
-                        key.interestOps(SelectionKey.OP_READ); */
                     }
 
 
@@ -248,14 +199,14 @@ public class PeerServer {
         ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
         int numread;
+        int totalread ;
         numread = sc.read(readBuffer);
+        totalread = numread ;
         while (numread > 0) {
             // readBuffer.clear();
             numread = sc.read(readBuffer);
 
-            if (numread <= 0) {
-                break;
-            }
+            totalread = totalread + numread ;
 
 
         }
@@ -271,28 +222,11 @@ public class PeerServer {
 
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
         readBuffer.rewind() ;
-        int messagesize = readBuffer.getInt() ;
-        LOG.info("Received message of size " + messagesize) ;
-        int messageType = readBuffer.getInt() ;
-        if (messageType == 1) {
 
-            LOG.info("Received a hello message") ;
-        }
-
-        int greetingSize = readBuffer.getInt() ;
-        byte[] greetingBytes = new byte[greetingSize] ;
-        readBuffer.get(greetingBytes,0,greetingSize) ;
-        LOG.info("text greeing "+new String(greetingBytes)) ;
+        inBoundMessageCreator.submit(sc,readBuffer,totalread);
 
 
-        int hostStringSize = readBuffer.getInt() ;
-        byte[] hostStringBytes = new byte[hostStringSize] ;
-        readBuffer.get(hostStringBytes,0,hostStringSize) ;
-        LOG.info("from host "+new String(hostStringBytes)) ;
-
-        LOG.info("and port "+readBuffer.getInt()) ;
-
-        key.interestOps(SelectionKey.OP_WRITE);
+        // key.interestOps(SelectionKey.OP_WRITE);
 
 
     }
@@ -395,6 +329,7 @@ public class PeerServer {
     }
 
 
+    /*
     public void addPeer(PeerClient p) {
         if (!peerSet.contains(p)) {
             peerSet.add(p);
@@ -405,21 +340,26 @@ public class PeerServer {
     public void removePeer(PeerClient p) {
         peerSet.remove(p) ;
         // logCluster();
+    } */
+
+    public void addPeer(String hostString, int port) {
+
+        members.put(new Member(hostString,port),"") ;
     }
 
     public void logCluster() throws Exception {
 
-        StringBuilder sb = new StringBuilder("Cluster members ["+bindHost+":"+bindPort+",") ;
+        StringBuilder sb = new StringBuilder("Cluster members [") ;
 
-        queuedWrites.forEach((k,v)->{
+        LOG.info("number of members "+members.size()) ;
+
+        members.forEach((k,v)->{
 
             try {
-                InetSocketAddress inetaddr = (InetSocketAddress) k.getRemoteAddress();
 
-
-                sb.append(inetaddr.getHostString()) ;
+                sb.append(k.getHostString()) ;
                 sb.append(":") ;
-                sb.append(inetaddr.getPort()) ;
+                sb.append(k.getPort()) ;
                 sb.append(",") ;
 
 
