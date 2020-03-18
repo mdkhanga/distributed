@@ -24,16 +24,15 @@ public class InBoundMessageCreator {
     PeerServer peerServer ;
     InBoundMessageHandler inBoundMessageHandler ;
 
-    public InBoundMessageCreator(PeerServer p) {
+    public InBoundMessageCreator() {
 
-        peerServer = p ;
-        inBoundMessageHandler = new InBoundMessageHandler(peerServer) ;
+        inBoundMessageHandler = new InBoundMessageHandler() ;
 
     }
 
-    public void submit(SocketChannel s, ByteBuffer b, int bytesinbuffer) {
+    public void submit(SocketChannel s, ByteBuffer b, int bytesinbuffer,Callable c) {
 
-        inBoundMessageParser.submit(new InBoundMessageReader(s,b,bytesinbuffer)) ;
+        inBoundMessageParser.submit(new InBoundMessageReader(s,b,bytesinbuffer,c)) ;
     }
 
     public class InBoundMessageReader implements Callable {
@@ -41,12 +40,14 @@ public class InBoundMessageCreator {
         SocketChannel socketChannel ;
         ByteBuffer readBuffer ;
         int numbytes ;
+        Callable handler ;
 
-        public InBoundMessageReader(SocketChannel s, ByteBuffer b,int numbyt) {
+        public InBoundMessageReader(SocketChannel s, ByteBuffer b,int numbyt,Callable c) {
 
             socketChannel = s ;
             readBuffer = b ;
             numbytes = numbyt ;
+            handler = c ;
 
         }
 
@@ -58,7 +59,7 @@ public class InBoundMessageCreator {
 
             if (!prevreadpartial) {
                 messagesize = readBuffer.getInt();
-                LOG.info("Received message of size " + messagesize);
+                // LOG.info("Received message of size " + messagesize);
 
 
                 if (messagesize == numbytes) {
@@ -66,7 +67,8 @@ public class InBoundMessageCreator {
                     // We have the full message
 
                     readBuffer.rewind();
-                    inBoundMessageHandler.submit(socketChannel, readBuffer);
+                    // inBoundMessageHandler.submit(new ServerMessageHandlerCallable(socketChannel,readBuffer));
+                    inBoundMessageHandler.submit(handler);
                 } else if (messagesize < numbytes) {
                     LOG.info("Did not receive full message " + numbytes);
                 } else {

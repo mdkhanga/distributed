@@ -12,21 +12,20 @@ import java.util.concurrent.Executors;
 
 public class InBoundMessageHandler {
 
-    PeerServer peerServer ;
 
     ExecutorService messageHandlers = Executors.newCachedThreadPool() ;
 
     Logger LOG  = LoggerFactory.getLogger(InBoundMessageHandler.class) ;
 
-    public InBoundMessageHandler(PeerServer s) {
+    public InBoundMessageHandler() {
 
-        peerServer = s ;
 
     }
 
-    public void submit(SocketChannel s, ByteBuffer b) {
+    public void submit(Callable c) {
 
-        messageHandlers.submit(new InBoundMessageHandlerCallable(s,b)) ;
+        // messageHandlers.submit(new InBoundMessageHandlerCallable(s,b)) ;
+        messageHandlers.submit(c) ;
 
     }
 
@@ -54,7 +53,7 @@ public class InBoundMessageHandler {
 
                 LOG.info("Received a hello message") ;
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind()) ;
-                peerServer.addPeer(message.getHostString(),message.getHostPort());
+                PeerServer.peerServer.addPeer(message.getHostString(),message.getHostPort());
             }
 
 

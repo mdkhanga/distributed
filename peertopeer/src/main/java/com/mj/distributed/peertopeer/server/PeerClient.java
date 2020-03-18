@@ -170,6 +170,7 @@ public class PeerClient {
         readBuf.clear() ;
 
         int numread = clientChannel.read( readBuf );
+        int totalread = numread ;
         while (numread > 0) {
 
             // System.out.println("before read") ;
@@ -180,6 +181,7 @@ public class PeerClient {
             if (numread <=0) {
                 break;
             }
+            totalread = totalread + numread ;
 
 
         }
@@ -192,17 +194,16 @@ public class PeerClient {
             key.cancel();
         }
 
-        // key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ) ;
+        readBuf.rewind() ;
+
+        PeerServer.inBoundMessageCreator.submit(clientChannel,readBuf,totalread,
+                new ClientMessageHandlerCallable(clientChannel,readBuf));
 
     }
 
 
 
-    public void ping(int i) throws IOException {
-        PingMessage pingMessage = new PingMessage(i);
-        pingMessage.serialize(dos);
 
-    }
 
     public void sendMessage(Message m) {
 

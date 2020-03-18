@@ -3,17 +3,18 @@ package com.mj.distributed.message;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Created by manoj on 6/18/17.
  */
-public class AckMessage extends AbstractMessage {
+public class AckMessage  {
 
-    private static int messageTypeId = 2 ;
-    private long idOfMessageAcked ;
+    private static int messageTypeId = 3 ;
+    private int seqOfMessageAcked ;
 
-    public long getMessageTypeId() {
-        return messageId ;
+    public int getMessageTypeId() {
+        return messageTypeId ;
     }
 
 
@@ -22,23 +23,29 @@ public class AckMessage extends AbstractMessage {
     }
 
     public AckMessage(int id) {
-        idOfMessageAcked= id ;
+        seqOfMessageAcked= id ;
     }
 
-    public void serialize(DataOutputStream out) throws IOException {
-        out.writeInt(messageTypeId) ;
-        out.writeLong(idOfMessageAcked) ;
+    public ByteBuffer serialize() {
+
+
+        return null ;
     }
 
-    public void deserialize(DataInputStream in) throws IOException {
-        idOfMessageAcked = in.readLong() ;
+    public static AckMessage deserialize(ByteBuffer b) {
+
+        return null ;
+    }
+
+    public int size() {
+
+        // length 4
+        // messageTypeId 4
+        // int seqOfMessageAcked
+
+        return 12 ;
 
     }
 
 
-
-    public String print() {
-
-        return "Ack for message :" + idOfMessageAcked ;
-    }
 }

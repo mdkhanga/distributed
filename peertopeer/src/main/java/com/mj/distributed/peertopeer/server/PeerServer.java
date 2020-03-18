@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.Message;
+import com.mj.distributed.message.PingMessage;
 import com.mj.distributed.model.Member;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +28,9 @@ public class PeerServer {
     private int serverId ;
     private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
-    // private int[] seeds ;
-    // List<PeerClient> peers = new ArrayList<PeerClient>();
-    // private HashMap<SocketChannel,ByteBuffer> queuedWrites = new HashMap<SocketChannel,ByteBuffer>() ;
-    private HashMap<SocketChannel,AtomicInteger> queuedWrites = new HashMap<SocketChannel,AtomicInteger>() ;
+    // private HashMap<SocketChannel,AtomicInteger> queuedWrites = new HashMap<SocketChannel,AtomicInteger>() ;
+    private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
+
 
     private ConcurrentHashMap<Member,String> members = new ConcurrentHashMap<>() ;
 
@@ -43,7 +43,9 @@ public class PeerServer {
 
     Selector selector ;
 
-    InBoundMessageCreator inBoundMessageCreator  ;
+    public static InBoundMessageCreator inBoundMessageCreator = new InBoundMessageCreator() ;
+
+    public static PeerServer peerServer ;
 
     public PeerServer(int id) {
 
@@ -53,8 +55,8 @@ public class PeerServer {
             leader = true ;
         }
 
-        inBoundMessageCreator = new InBoundMessageCreator(this) ;
-        // seeds = seed ;
+        // inBoundMessageCreator = new InBoundMessageCreator() ;
+
     }
 
     public void start(String[] seed) throws Exception {
@@ -125,11 +127,12 @@ public class PeerServer {
             while (true) {
 
                 if (x == 1) {
-                    queuedWrites.forEach((k, v) -> {
+                    channelPeerMap.forEach((k, v) -> {
 
                         try {
-                            // Thread.sleep(2000);
-                            k.register(selector, SelectionKey.OP_WRITE);
+                            if (v.peekWriteBuffer() != null) {
+                                k.register(selector, SelectionKey.OP_WRITE);
+                            }
                             // selector.wakeup();
                         } catch (Exception e) {
                             LOG.error("error", e);
@@ -187,8 +190,11 @@ public class PeerServer {
         SocketChannel sc = ssc.accept();
         sc.configureBlocking(false);
 
-        // queuedWrites.put(sc,ByteBuffer.wrap(("ping from server "+serverId).getBytes())) ;
-        queuedWrites.put(sc,new AtomicInteger(0)) ;
+        // queuedWrites.put(sc,new AtomicInteger(0)) ;
+
+        InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
+
+        channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
 
 
     }
@@ -223,7 +229,7 @@ public class PeerServer {
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
         readBuffer.rewind() ;
 
-        inBoundMessageCreator.submit(sc,readBuffer,totalread);
+        inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,readBuffer));
 
 
         // key.interestOps(SelectionKey.OP_WRITE);
@@ -235,26 +241,42 @@ public class PeerServer {
 
         SocketChannel sc = (SocketChannel) key.channel();
 
+
+        /*
         AtomicInteger i = queuedWrites.get(sc) ;
 
         String stowrite = "ping " + i.get() + " from server " + serverId ;
 
 
-        // System.out.println("Sending ping :" + stowrite);
-
         ByteBuffer towrite = ByteBuffer.wrap(stowrite.getBytes()) ;
 
-        towrite.rewind() ;
+        towrite.rewind() ; */
+
+        ByteBuffer towrite = channelPeerMap.get(sc).getNextWriteBuffer() ;
+
+        if (towrite == null) {
+            LOG.warn("Write queue is emptyy") ;
+            key.interestOps(SelectionKey.OP_READ);
+            return ;
+        }
+
 
         int n = sc.write(towrite);
         while (n > 0 && towrite.remaining() > 0) {
             n = sc.write(towrite);
+            LOG.info("Server wrote bytes "+n) ;
 
 
         }
 
+
+
         key.interestOps(SelectionKey.OP_READ);
 
+    }
+
+    public InBoundMessageCreator getInBoundMessageCreator() {
+        return inBoundMessageCreator;
     }
 
     public static void main(String args[]) throws Exception {
@@ -283,8 +305,8 @@ public class PeerServer {
         System.out.println("Starting server with serverId:" + serverId) ;
 
 
-        PeerServer server = new PeerServer(serverId) ;
-        server.start(seeds) ;
+        peerServer = new PeerServer(serverId) ;
+        peerServer.start(seeds) ;
     }
 
 
@@ -296,12 +318,17 @@ public class PeerServer {
             while(true) {
 
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(5000);
 
-                    queuedWrites.forEach((k,v)->{
+                    channelPeerMap.forEach((k,v)->{
 
                         try {
-                            v.incrementAndGet() ;
+                            // v.incrementAndGet() ;
+                            PingMessage p = new PingMessage(serverId,v.getNextSeq()) ;
+                            ByteBuffer b = p.serialize() ;
+                            b.flip() ;
+                            v.addWriteBuffer(b);
+
                         } catch(Exception e) {
                             LOG.error("error" ,e) ;
                         }
