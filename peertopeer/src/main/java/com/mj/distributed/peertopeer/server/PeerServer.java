@@ -374,6 +374,10 @@ public class PeerServer {
         members.put(new Member(hostString,port),"") ;
     }
 
+    public PeerData getPeerData(SocketChannel s) {
+        return channelPeerMap.get(s) ;
+    }
+
     public void logCluster() throws Exception {
 
         StringBuilder sb = new StringBuilder("Cluster members [") ;

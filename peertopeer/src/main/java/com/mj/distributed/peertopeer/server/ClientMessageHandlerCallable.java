@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.AckMessage;
 import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.message.PingMessage;
 import org.slf4j.Logger;
@@ -13,13 +14,15 @@ public class ClientMessageHandlerCallable implements Callable {
 
     SocketChannel socketChannel ;
     ByteBuffer readBuffer ;
+    PeerClient peerClient ;
 
     Logger LOG  = LoggerFactory.getLogger(ClientMessageHandlerCallable.class) ;
 
-    public ClientMessageHandlerCallable(SocketChannel s , ByteBuffer b) {
+    public ClientMessageHandlerCallable(PeerClient p, SocketChannel s , ByteBuffer b) {
 
         socketChannel = s ;
         readBuffer = b ;
+        peerClient = p ;
 
     }
 
@@ -38,6 +41,12 @@ public class ClientMessageHandlerCallable implements Callable {
 
             LOG.info("Received ping message from "+message.getServerId() + " seq :" + message.getSeqId()) ;
 
+            AckMessage resp = new AckMessage(message.getSeqId()) ;
+
+            ByteBuffer b = resp.serialize() ;
+            b.flip() ;
+
+            peerClient.queueSendMessage(b);
 
         }
 

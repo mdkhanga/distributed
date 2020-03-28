@@ -44,8 +44,27 @@ public class PeerData {
         writeQueue.add(b) ;
     }
 
+    public String getHostString() {
+        return hostString ;
+    }
 
+    public void setHostString(String s) {
+        hostString = s ;
+    }
 
+    public int getPort() {
+        return port ;
+    }
 
+    public void setPort(int p) {
+        port = p ;
+    }
 
+    public int getServerId() {
+        return serverId;
+    }
+
+    public void setServerId(int i) {
+        serverId = i ;
+    }
 }

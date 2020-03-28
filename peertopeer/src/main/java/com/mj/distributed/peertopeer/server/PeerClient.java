@@ -23,6 +23,8 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 // import java.net.Socket;
 
 
@@ -39,17 +41,19 @@ public class PeerClient {
     int remoteListenPort ; // if we initate connection, this is where we connect to
     InetAddress remoteIpAddress;
 
-
     String remoteHost ;
     SocketChannel clientChannel ;
 
-    public Deque<ByteBuffer> writeQueue = new ArrayDeque<ByteBuffer>() ;
+    Selector selector ;
 
-    private ByteBuffer readBuf = ByteBuffer.allocate(8192) ;
 
+    public Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
+
+    private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
+
 
     private PeerClient() {
 
@@ -69,7 +73,7 @@ public class PeerClient {
 
     public void start() throws Exception {
 
-        Selector selector = Selector.open() ;
+        selector = Selector.open() ;
 
         clientChannel = SocketChannel.open();
         clientChannel.configureBlocking(false);
@@ -82,10 +86,14 @@ public class PeerClient {
 
         // writeQueue.add("Hello from " + remoteHost + ":" + remotePort) ;
         HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
-        writeQueue.addLast(m.serialize());
+        writeQueue.add(m.serialize());
 
         while(true) {
 
+
+            if (clientChannel.isConnected() && writeQueue.peek() != null) {
+                clientChannel.register(selector, SelectionKey.OP_WRITE);
+            }
 
 
             selector.select() ;
@@ -144,7 +152,7 @@ public class PeerClient {
 
             ByteBuffer b ;
             // b = ByteBuffer.wrap(toWrite.getBytes()) ;
-            b = writeQueue.getFirst() ;
+            b = writeQueue.poll() ;
 
 
 
@@ -197,7 +205,7 @@ public class PeerClient {
         readBuf.rewind() ;
 
         PeerServer.inBoundMessageCreator.submit(clientChannel,readBuf,totalread,
-                new ClientMessageHandlerCallable(clientChannel,readBuf));
+                new ClientMessageHandlerCallable(this,clientChannel,readBuf));
 
     }
 
@@ -209,6 +217,14 @@ public class PeerClient {
 
         // message needs to be queue and sent by a writer thread
     }
+
+    public void queueSendMessage(ByteBuffer b) {
+
+        writeQueue.add(b) ;
+        selector.wakeup() ;
+
+    }
+
 
 
     public class PeerReadRunnable implements Runnable {

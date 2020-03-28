@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.AckMessage;
 import com.mj.distributed.message.HelloMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,17 +27,25 @@ public class ServerMessageHandlerCallable implements Callable {
     public Void call() {
 
         int messagesize = readBuffer.getInt() ;
-        LOG.info("Received message of size " + messagesize) ;
+        // LOG.info("Received message of size " + messagesize) ;
         int messageType = readBuffer.getInt() ;
         if (messageType == 1) {
 
             LOG.info("Received a hello message") ;
             HelloMessage message = HelloMessage.deserialize(readBuffer.rewind()) ;
             PeerServer.peerServer.addPeer(message.getHostString(),message.getHostPort());
+            PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
+            d.setHostString(message.getHostString());
+            d.setPort(message.getHostPort());
+
+        } else if (messageType == 3) {
+
+            LOG.info("Received a Ack message") ;
+            AckMessage message = AckMessage.deserialize(readBuffer.rewind()) ;
+            PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
+            LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked()) ;
+
         }
-
-
-
 
         return null ;
     }

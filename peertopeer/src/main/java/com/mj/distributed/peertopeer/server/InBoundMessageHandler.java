@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.AckMessage;
 import com.mj.distributed.message.HelloMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
