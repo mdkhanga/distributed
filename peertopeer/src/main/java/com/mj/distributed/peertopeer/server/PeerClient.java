@@ -47,6 +47,7 @@ public class PeerClient {
     Selector selector ;
 
 
+
     public Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
@@ -126,6 +127,8 @@ public class PeerClient {
             }
 
             ++i ;
+
+            peerServer.logCluster();
             // if (i == 11)
             //	break ;
         }
@@ -137,17 +140,12 @@ public class PeerClient {
 
         clientChannel.finishConnect() ;
         key.interestOps(SelectionKey.OP_WRITE) ;
+        peerServer.addPeer(remoteHost+":"+remotePort) ;
 
 
     }
 
     private void write(SelectionKey key) throws IOException {
-
-
-        // String toWrite = "Hello from 5002" ;
-
-        // if (toWrite != null) {
-
 
 
             ByteBuffer b ;
@@ -164,9 +162,8 @@ public class PeerClient {
 
             }
 
-            LOG.info("Wrote to channel " + totalbyteswritten) ;
+            // LOG.info("Wrote to channel " + totalbyteswritten) ;
 
-        // }
 
         key.interestOps(SelectionKey.OP_READ) ;
     }
@@ -177,39 +174,46 @@ public class PeerClient {
 
         readBuf.clear() ;
 
-        int numread = clientChannel.read( readBuf );
-        int totalread = numread ;
-        while (numread > 0) {
+        try {
 
-            // System.out.println("before read") ;
-            numread = clientChannel.read( readBuf );
-            // System.out.println("after read") ;
+            int numread = clientChannel.read(readBuf);
+            int totalread = numread;
+            while (numread > 0) {
+
+                // System.out.println("before read") ;
+                numread = clientChannel.read(readBuf);
+                // System.out.println("after read") ;
+
+                if (numread <= 0) {
+                    break;
+                }
+                totalread = totalread + numread;
 
 
-            if (numread <=0) {
-                break;
             }
-            totalread = totalread + numread ;
 
+            System.out.println("Read from server:" + new String(readBuf.array()));
 
-        }
+            if (numread < 0) {
 
-        System.out.println("Read from server:" + new String(readBuf.array())) ;
+                clientChannel.close();
+                key.cancel();
+            }
 
-        if (numread < 0) {
+            readBuf.rewind();
 
-            clientChannel.close();
+            PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread,
+                    new ClientMessageHandlerCallable(this, clientChannel, readBuf));
+        } catch (IOException e) {
+            clientChannel.close() ;
             key.cancel();
+            String s = remoteHost +":"+remotePort ;
+            LOG.info(s + " has left the cluster") ;
+            peerServer.removePeer(s);
+
         }
-
-        readBuf.rewind() ;
-
-        PeerServer.inBoundMessageCreator.submit(clientChannel,readBuf,totalread,
-                new ClientMessageHandlerCallable(this,clientChannel,readBuf));
 
     }
-
-
 
 
 

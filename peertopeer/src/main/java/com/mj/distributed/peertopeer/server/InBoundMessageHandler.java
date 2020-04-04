@@ -48,13 +48,13 @@ public class InBoundMessageHandler {
         public Void call() {
 
             int messagesize = readBuffer.getInt() ;
-            LOG.info("Received message of size " + messagesize) ;
+            // LOG.info("Received message of size " + messagesize) ;
             int messageType = readBuffer.getInt() ;
             if (messageType == 1) {
 
                 LOG.info("Received a hello message") ;
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind()) ;
-                PeerServer.peerServer.addPeer(message.getHostString(),message.getHostPort());
+                PeerServer.peerServer.addPeer(message.getHostString()+":"+message.getHostPort());
             }
 
 

@@ -33,14 +33,14 @@ public class ServerMessageHandlerCallable implements Callable {
 
             LOG.info("Received a hello message") ;
             HelloMessage message = HelloMessage.deserialize(readBuffer.rewind()) ;
-            PeerServer.peerServer.addPeer(message.getHostString(),message.getHostPort());
+            PeerServer.peerServer.addPeer(message.getHostString()+":"+message.getHostPort());
             PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
             d.setHostString(message.getHostString());
             d.setPort(message.getHostPort());
 
         } else if (messageType == 3) {
 
-            LOG.info("Received a Ack message") ;
+            // LOG.info("Received a Ack message") ;
             AckMessage message = AckMessage.deserialize(readBuffer.rewind()) ;
             PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
             LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked()) ;

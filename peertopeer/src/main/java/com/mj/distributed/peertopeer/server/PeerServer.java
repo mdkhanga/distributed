@@ -21,6 +21,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
@@ -32,7 +33,7 @@ public class PeerServer {
     private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
 
-    private ConcurrentHashMap<Member,String> members = new ConcurrentHashMap<>() ;
+   private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
 
     Integer x = 0 ;
 
@@ -108,7 +109,7 @@ public class PeerServer {
 
         LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
 
-        members.put(new Member(bindHost,bindPort),"") ;
+        addPeer(bindHost+":"+bindPort) ;
         // ServerSocket s = new ServerSocket(port) ;
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
         serverSocketChannel.configureBlocking(false) ;
@@ -204,27 +205,40 @@ public class PeerServer {
         SocketChannel sc = (SocketChannel) key.channel();
         ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
-        int numread;
-        int totalread ;
-        numread = sc.read(readBuffer);
-        totalread = numread ;
-        while (numread > 0) {
-            // readBuffer.clear();
+        int numread = 0;
+        int totalread = 0;
+        try {
+
             numread = sc.read(readBuffer);
+            totalread = numread;
+            while (numread > 0) {
+                // readBuffer.clear();
+                numread = sc.read(readBuffer);
 
-            totalread = totalread + numread ;
+                totalread = totalread + numread;
 
 
+            }
+
+            if (numread == -1) {
+                // Remote entity shut the socket down cleanly. Do the
+                // same from our end and cancel the channel.
+                // key.channel().close();
+                // key.cancel();
+                throw new IOException("Read returned -1. Channel closed by client.") ;
+
+            }
+        } catch(IOException e) {
+
+            sc.close() ;
+            key.cancel() ;
+
+            PeerData p = channelPeerMap.get(sc) ;
+
+            LOG.info(p.getHostString() +":" +p.getPort() + " has left the cluster") ;
+            channelPeerMap.remove(sc) ;
+            members.remove(p.getHostString()+":"+p.getPort()) ;
         }
-
-        if (numread == -1) {
-            // Remote entity shut the socket down cleanly. Do the
-            // same from our end and cancel the channel.
-            key.channel().close();
-            key.cancel();
-
-        }
-
 
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
         readBuffer.rewind() ;
@@ -362,16 +376,16 @@ public class PeerServer {
             peerSet.add(p);
             // logCluster();
         }
-    }
-
-    public void removePeer(PeerClient p) {
-        peerSet.remove(p) ;
-        // logCluster();
     } */
 
-    public void addPeer(String hostString, int port) {
+    public void removePeer(String m) {
+        members.remove(m) ;
+        // logCluster();
+    }
 
-        members.put(new Member(hostString,port),"") ;
+    public void addPeer(String m) {
+
+        members.add(m) ;
     }
 
     public PeerData getPeerData(SocketChannel s) {
@@ -384,13 +398,11 @@ public class PeerServer {
 
         LOG.info("number of members "+members.size()) ;
 
-        members.forEach((k,v)->{
+        members.forEach((k)->{
 
             try {
 
-                sb.append(k.getHostString()) ;
-                sb.append(":") ;
-                sb.append(k.getPort()) ;
+                sb.append(k) ;
                 sb.append(",") ;
 
 
