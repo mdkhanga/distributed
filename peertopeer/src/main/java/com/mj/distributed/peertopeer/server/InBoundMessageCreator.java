@@ -82,26 +82,7 @@ public class InBoundMessageCreator {
 
             }
 
-            /*
-            int messageType = readBuffer.getInt() ;
-            if (messageType == 1) {
 
-                LOG.info("Received a hello message") ;
-            }
-
-            int greetingSize = readBuffer.getInt() ;
-            byte[] greetingBytes = new byte[greetingSize] ;
-            readBuffer.get(greetingBytes,0,greetingSize) ;
-            LOG.info("text greeing "+new String(greetingBytes)) ;
-
-
-            int hostStringSize = readBuffer.getInt() ;
-            byte[] hostStringBytes = new byte[hostStringSize] ;
-            readBuffer.get(hostStringBytes,0,hostStringSize) ;
-            LOG.info("from host "+new String(hostStringBytes)) ;
-
-            LOG.info("and port "+readBuffer.getInt()) ;
-            */
 
             return null ;
         }
