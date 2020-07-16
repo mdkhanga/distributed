@@ -4,31 +4,23 @@ package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.message.Message;
-import com.mj.distributed.message.MessageFactory;
-import com.mj.distributed.message.PingMessage;
-
 import org.slf4j.LoggerFactory ;
 import org.slf4j.Logger ;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-// import java.net.Socket;
+
 
 
 /**
@@ -146,7 +138,6 @@ public class PeerClient {
 
             int i = 0 ;
 
-            // writeQueue.add("Hello from " + remoteHost + ":" + remotePort) ;
             HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
             writeQueue.add(m.serialize());
 
@@ -159,8 +150,6 @@ public class PeerClient {
 
 
                 selector.select() ;
-
-                // System.out.println(i) ;
 
                 Iterator<SelectionKey> skeys = selector.selectedKeys().iterator() ;
 
@@ -189,13 +178,8 @@ public class PeerClient {
 
                 ++i ;
 
-                // peerServer.logCluster();
-                // if (i == 11)
-                //	break ;
             }
 
-
-            // return null;
         }
 
         private void finishConnection(SelectionKey key) throws IOException {
@@ -203,18 +187,12 @@ public class PeerClient {
             clientChannel.finishConnect() ;
             key.interestOps(SelectionKey.OP_WRITE) ;
             peerServer.addPeer(remoteHost+":"+remotePort) ;
-
-
         }
 
         private void write(SelectionKey key) throws IOException {
 
-
             ByteBuffer b ;
-            // b = ByteBuffer.wrap(toWrite.getBytes()) ;
             b = writeQueue.poll() ;
-
-
 
             int n = clientChannel.write(b) ;
             int totalbyteswritten = n ;
@@ -224,15 +202,10 @@ public class PeerClient {
 
             }
 
-            // LOG.info("Wrote to channel " + totalbyteswritten) ;
-
-
             key.interestOps(SelectionKey.OP_READ) ;
         }
 
         public void read(SelectionKey key) throws IOException {
-
-            // System.out.println("In read") ;
 
             readBuf.clear() ;
 
@@ -242,9 +215,7 @@ public class PeerClient {
                 int totalread = numread;
                 while (numread > 0) {
 
-                    // System.out.println("before read") ;
                     numread = clientChannel.read(readBuf);
-                    // System.out.println("after read") ;
 
                     if (numread <= 0) {
                         break;

@@ -36,7 +36,6 @@ public class ClientMessageHandlerCallable implements Callable {
         // LOG.info("Received message type " + messageType) ;
         if (messageType == 2) {
 
-            // LOG.info("Received a Ping message") ;
             PingMessage message = PingMessage.deserialize(readBuffer.rewind()) ;
 
             LOG.info("Received ping message from "+message.getServerId() + " seq :" + message.getSeqId()) ;
@@ -44,10 +43,8 @@ public class ClientMessageHandlerCallable implements Callable {
             AckMessage resp = new AckMessage(message.getSeqId()) ;
 
             ByteBuffer b = resp.serialize() ;
-            b.flip() ;
 
             peerClient.queueSendMessage(b);
-
         }
 
 

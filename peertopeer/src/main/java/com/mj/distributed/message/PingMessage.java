@@ -1,5 +1,6 @@
 package com.mj.distributed.message;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -28,14 +29,24 @@ public class PingMessage {
     }
 
     public ByteBuffer serialize() throws IOException {
-        ByteBuffer b = ByteBuffer.allocate(size()) ;
 
-        b.putInt(size()) ;
-        b.putInt(messageType) ;
-        b.putInt(serverId) ;
-        b.putInt(seqId) ;
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        DataOutputStream d = new DataOutputStream(b);
 
-        return b ;
+        d.writeInt(messageType);
+        d.writeInt(serverId);
+        d.writeInt(seqId);
+
+        byte[] pingMsgArray = b.toByteArray();
+
+        ByteBuffer retBuffer = ByteBuffer.allocate(pingMsgArray.length+4);//
+
+        retBuffer.putInt(pingMsgArray.length);
+        retBuffer.put(pingMsgArray);
+
+        retBuffer.flip() ; // make it ready for reading
+
+        return retBuffer ;
      }
 
     public static PingMessage deserialize(ByteBuffer readBuffer) throws IOException {

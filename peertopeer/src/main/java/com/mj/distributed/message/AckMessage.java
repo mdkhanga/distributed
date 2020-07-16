@@ -1,5 +1,6 @@
 package com.mj.distributed.message;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -30,14 +31,23 @@ public class AckMessage  {
         return seqOfMessageAcked;
     }
 
-    public ByteBuffer serialize() {
+    public ByteBuffer serialize() throws Exception {
 
-        ByteBuffer b = ByteBuffer.allocate(size()) ;
-        b.putInt(size()) ;
-        b.putInt(messageType) ;
-        b.putInt(seqOfMessageAcked) ;
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        DataOutputStream d = new DataOutputStream(b);
+        d.writeInt(messageType);
+        d.writeInt(seqOfMessageAcked) ;
 
-        return b ;
+        byte[] ackMsgArray = b.toByteArray();
+
+        ByteBuffer retBuffer = ByteBuffer.allocate(ackMsgArray.length+4);//
+
+        retBuffer.putInt(ackMsgArray.length);
+        retBuffer.put(ackMsgArray);
+
+        retBuffer.flip() ; // make it ready for reading
+
+        return retBuffer ;
     }
 
     public static AckMessage deserialize(ByteBuffer b) {
@@ -57,15 +67,6 @@ public class AckMessage  {
         return r ;
     }
 
-    public int size() {
-
-        // length 4
-        // messageTypeId 4
-        // int seqOfMessageAcked
-
-        return 12 ;
-
-    }
 
 
 }

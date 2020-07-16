@@ -32,7 +32,11 @@ public class InBoundMessageCreator {
 
     public void submit(SocketChannel s, ByteBuffer b, int bytesinbuffer,Callable c) {
 
-        inBoundMessageParser.submit(new InBoundMessageReader(s,b,bytesinbuffer,c)) ;
+        // make a copy of the ByteBuffer
+        ByteBuffer newBuffer = ByteBuffer.allocate(bytesinbuffer);
+        System.arraycopy(b.array(),0,newBuffer.array(),0,bytesinbuffer);
+
+        inBoundMessageParser.submit(new InBoundMessageReader(s,newBuffer,bytesinbuffer,c)) ;
     }
 
     public class InBoundMessageReader implements Callable {
@@ -59,18 +63,17 @@ public class InBoundMessageCreator {
 
             if (!prevreadpartial) {
                 messagesize = readBuffer.getInt();
-                // LOG.info("Received message of size " + messagesize);
+                int messageBytesRead = numbytes -4 ;
 
 
-                if (messagesize == numbytes) {
+                if (messagesize == messageBytesRead) {
 
                     // We have the full message
 
                     readBuffer.rewind();
-                    // inBoundMessageHandler.submit(new ServerMessageHandlerCallable(socketChannel,readBuffer));
                     inBoundMessageHandler.submit(handler);
-                } else if (messagesize < numbytes) {
-                    LOG.info("Did not receive full message " + numbytes);
+                } else if (messageBytesRead < messagesize) {
+                    LOG.info("Did not receive full message received:" + messageBytesRead + " expected: "+messagesize);
                 } else {
 
                     LOG.info("more than 1 message " + numbytes);

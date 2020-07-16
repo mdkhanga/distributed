@@ -45,6 +45,8 @@ public class ServerMessageHandlerCallable implements Callable {
             PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
             LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked()) ;
 
+        } else {
+            LOG.info("Received message of unknown type " + messageType);
         }
 
         return null ;

@@ -22,14 +22,12 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
 
     private int serverId ;
     private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
-    // private HashMap<SocketChannel,AtomicInteger> queuedWrites = new HashMap<SocketChannel,AtomicInteger>() ;
     private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
 
@@ -56,7 +54,6 @@ public class PeerServer {
             leader = true ;
         }
 
-        // inBoundMessageCreator = new InBoundMessageCreator() ;
 
     }
 
@@ -122,8 +119,6 @@ public class PeerServer {
 
 
          try {
-
-           // int x = 0 ;
 
             while (true) {
 
@@ -191,8 +186,6 @@ public class PeerServer {
         SocketChannel sc = ssc.accept();
         sc.configureBlocking(false);
 
-        // queuedWrites.put(sc,new AtomicInteger(0)) ;
-
         InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
 
         channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
@@ -212,7 +205,6 @@ public class PeerServer {
             numread = sc.read(readBuffer);
             totalread = numread;
             while (numread > 0) {
-                // readBuffer.clear();
                 numread = sc.read(readBuffer);
 
                 totalread = totalread + numread;
@@ -243,28 +235,14 @@ public class PeerServer {
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
         readBuffer.rewind() ;
 
-        inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,readBuffer));
-
-
-        // key.interestOps(SelectionKey.OP_WRITE);
-
+        inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,
+                readBuffer));
 
     }
 
     private void write(SelectionKey key) throws IOException {
 
         SocketChannel sc = (SocketChannel) key.channel();
-
-
-        /*
-        AtomicInteger i = queuedWrites.get(sc) ;
-
-        String stowrite = "ping " + i.get() + " from server " + serverId ;
-
-
-        ByteBuffer towrite = ByteBuffer.wrap(stowrite.getBytes()) ;
-
-        towrite.rewind() ; */
 
         ByteBuffer towrite = channelPeerMap.get(sc).getNextWriteBuffer() ;
 
@@ -279,11 +257,7 @@ public class PeerServer {
         while (n > 0 && towrite.remaining() > 0) {
             n = sc.write(towrite);
             LOG.info("Server wrote bytes "+n) ;
-
-
         }
-
-
 
         key.interestOps(SelectionKey.OP_READ);
 
@@ -340,7 +314,7 @@ public class PeerServer {
                             // v.incrementAndGet() ;
                             PingMessage p = new PingMessage(serverId,v.getNextSeq()) ;
                             ByteBuffer b = p.serialize() ;
-                            b.flip() ;
+                            // b.flip() ;
                             v.addWriteBuffer(b);
 
                         } catch(Exception e) {
@@ -369,14 +343,6 @@ public class PeerServer {
 
     }
 
-
-    /*
-    public void addPeer(PeerClient p) {
-        if (!peerSet.contains(p)) {
-            peerSet.add(p);
-            // logCluster();
-        }
-    } */
 
     public void removePeer(String m) {
         members.remove(m) ;
@@ -414,7 +380,6 @@ public class PeerServer {
 
         sb.append("]") ;
 
-        // System.out.println(sb) ;
         LOG.info(sb.toString()) ;
 
     }
@@ -423,7 +388,5 @@ public class PeerServer {
 
 
     }
-
-
-
+    
 }

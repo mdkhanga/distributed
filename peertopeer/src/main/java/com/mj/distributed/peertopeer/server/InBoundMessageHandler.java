@@ -25,7 +25,6 @@ public class InBoundMessageHandler {
 
     public void submit(Callable c) {
 
-        // messageHandlers.submit(new InBoundMessageHandlerCallable(s,b)) ;
         messageHandlers.submit(c) ;
 
     }

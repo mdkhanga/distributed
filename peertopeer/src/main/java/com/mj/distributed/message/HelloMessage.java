@@ -4,6 +4,9 @@ import com.mj.distributed.peertopeer.server.PeerServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
@@ -48,32 +51,28 @@ public class HelloMessage {
      */
     public ByteBuffer serialize() throws Exception {
 
-        // int messagesize = recordsize+4 ; // len of record + 4. we write len in message
-
         byte[] greetingBytes = greeting.getBytes("UTF-8") ;
         byte[] hostStringBytes = hostString.getBytes("UTF-8") ;
 
-        // messagesize+messagetype+greeting.len+greeting+hoststring.len+hoststring+port
-        int messagesize = 4+4+4+greetingBytes.length+4+hostStringBytes.length+4 ;
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        DataOutputStream d = new DataOutputStream(b);
+        d.writeInt(messageType);
+        d.writeInt(greetingBytes.length);
+        d.write(greetingBytes);
+        d.writeInt(hostStringBytes.length);
+        d.write(hostStringBytes);
+        d.writeInt(hostPort);
 
-        ByteBuffer b = ByteBuffer.allocate(messagesize) ;
+        byte[] helloMsgArray = b.toByteArray();
 
-        b.putInt(messagesize) ;
-        b.putInt(messageType) ;
+        ByteBuffer retBuffer = ByteBuffer.allocate(helloMsgArray.length+4);//
 
+        retBuffer.putInt(helloMsgArray.length);
+        retBuffer.put(helloMsgArray);
 
-        b.putInt(greetingBytes.length) ;
-        b.put(greetingBytes) ;
+        retBuffer.flip() ; // make it ready for reading
 
-
-        b.putInt(hostStringBytes.length) ;
-        b.put(hostStringBytes) ;
-
-        b.putInt(hostPort) ;
-
-        b.flip() ; // make it ready for reading
-
-        return b ;
+        return retBuffer ;
     }
 
     public static HelloMessage deserialize(ByteBuffer readBuffer) {
@@ -101,8 +100,6 @@ public class HelloMessage {
 
         int port = readBuffer.getInt() ;
         LOG.info("and port "+port) ;
-
-
 
         return new HelloMessage(hostString,port) ;
     }
