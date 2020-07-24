@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.AppendEntriesMessage;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.message.PingMessage;
 import com.mj.distributed.model.Member;
@@ -311,10 +312,9 @@ public class PeerServer {
                     channelPeerMap.forEach((k,v)->{
 
                         try {
-                            // v.incrementAndGet() ;
-                            PingMessage p = new PingMessage(serverId,v.getNextSeq()) ;
+                            // PingMessage p = new PingMessage(serverId,v.getNextSeq()) ;
+                            AppendEntriesMessage p = new AppendEntriesMessage(1, v.getNextSeq());
                             ByteBuffer b = p.serialize() ;
-                            // b.flip() ;
                             v.addWriteBuffer(b);
 
                         } catch(Exception e) {
@@ -388,5 +388,5 @@ public class PeerServer {
 
 
     }
-    
+
 }

@@ -1,8 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
-import com.mj.distributed.message.AckMessage;
-import com.mj.distributed.message.HelloMessage;
-import com.mj.distributed.message.PingMessage;
+import com.mj.distributed.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,27 +25,38 @@ public class ClientMessageHandlerCallable implements Callable {
     }
 
 
-    public Void call() throws Exception{
+    public Void call() {
 
         int messagesize = readBuffer.getInt() ;
         // LOG.info("Received message of size " + messagesize) ;
         int messageType = readBuffer.getInt() ;
 
         // LOG.info("Received message type " + messageType) ;
-        if (messageType == 2) {
+        try {
+            if (messageType == 2) {
 
-            PingMessage message = PingMessage.deserialize(readBuffer.rewind()) ;
+                PingMessage message = PingMessage.deserialize(readBuffer.rewind());
 
-            LOG.info("Received ping message from "+message.getServerId() + " seq :" + message.getSeqId()) ;
+                LOG.info("Received ping message from " + message.getServerId() + " seq :" + message.getSeqId());
 
-            AckMessage resp = new AckMessage(message.getSeqId()) ;
+                AckMessage resp = new AckMessage(message.getSeqId());
 
-            ByteBuffer b = resp.serialize() ;
+                ByteBuffer b = resp.serialize();
 
-            peerClient.queueSendMessage(b);
+                peerClient.queueSendMessage(b);
+            } else if (messageType == 4) {
+
+                AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
+                LOG.info("Received AppendEntries message from " + message.getLeaderId() + " seq :" + message.getSeqId());
+
+                AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, true);
+                ByteBuffer b = resp.serialize();
+                peerClient.queueSendMessage(b);
+            }
+
+        } catch(Exception e) {
+            LOG.error("Error processing message",e);
         }
-
-
 
 
         return null ;

@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AckMessage;
+import com.mj.distributed.message.AppendEntriesResponse;
 import com.mj.distributed.message.HelloMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,10 +42,13 @@ public class ServerMessageHandlerCallable implements Callable {
         } else if (messageType == 3) {
 
             // LOG.info("Received a Ack message") ;
-            AckMessage message = AckMessage.deserialize(readBuffer.rewind()) ;
-            PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
-            LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked()) ;
-
+            AckMessage message = AckMessage.deserialize(readBuffer.rewind());
+            PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+            LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
+        } else if (messageType == 5) {
+            AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
+            PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+            LOG.info("Received an appendEntriesResponse message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
         } else {
             LOG.info("Received message of unknown type " + messageType);
         }

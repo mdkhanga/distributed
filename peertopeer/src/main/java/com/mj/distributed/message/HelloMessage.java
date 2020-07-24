@@ -25,15 +25,7 @@ public class HelloMessage {
         this.hostString = host ;
         this.hostPort = port ;
 
-        /*
-        try {
-            recordsize = 4 + greeting.getBytes("UTF-8").length + 4+ "111.111.111.111".getBytes("UTF-8").length + 4;
-        } catch(UnsupportedEncodingException e) {
-          LOG.error("Error getting size",e)  ;
-          recordsize = 66 ; // 4+4+10+4+30+4
-        } */
-
-    }
+          }
 
     public String getHostString() {
         return hostString ;
