@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 public class ClientMessageHandlerCallable implements Callable {
@@ -49,7 +50,16 @@ public class ClientMessageHandlerCallable implements Callable {
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
                 LOG.info("Received AppendEntries message from " + message.getLeaderId() + " seq :" + message.getSeqId());
 
-                AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, true);
+                boolean entryResult = true ;
+                List<LogEntry> data = message.getLogEntries() ;
+                LogEntry e = null ;
+                if (data.size() != 0) {
+                     e = data.get(0) ;
+                }
+
+
+                entryResult = peerClient.processLogEntry(e,message.getPrevIndex(),message.getLeaderCommitIndex()) ;
+                AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, entryResult);
                 ByteBuffer b = resp.serialize();
                 peerClient.queueSendMessage(b);
             }

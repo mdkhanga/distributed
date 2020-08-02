@@ -3,6 +3,7 @@ package com.mj.distributed.peertopeer.server;
 
 
 import com.mj.distributed.message.HelloMessage;
+import com.mj.distributed.message.LogEntry;
 import com.mj.distributed.message.Message;
 import org.slf4j.LoggerFactory ;
 import org.slf4j.Logger ;
@@ -14,7 +15,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -47,6 +50,8 @@ public class PeerClient {
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
+    List<byte[]> rlog = new ArrayList<>();
+    int lastComittedIndex  = -1 ;
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
 
@@ -75,7 +80,32 @@ public class PeerClient {
     }
 
 
+    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
 
+
+        boolean ret = true ;
+
+        if (e != null) {
+
+            int position = e.getIndex();
+            byte[] data = e.getEntry();
+
+            int expectedNextEntry = rlog.size();
+
+            if (prevIndex + 1 == expectedNextEntry) {
+                rlog.add(data);
+                ret = true ;
+            } else {
+                ret = false ;
+            }
+        }
+
+        if (lastComittedIndex > this.lastComittedIndex && lastComittedIndex < rlog.size()) {
+            this.lastComittedIndex = lastComittedIndex ;
+        }
+
+        return ret ;
+    }
 
     public void sendMessage(Message m) {
 

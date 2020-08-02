@@ -48,6 +48,10 @@ public class ServerMessageHandlerCallable implements Callable {
         } else if (messageType == 5) {
             AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
             PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+            int index = d.getIndexAcked(message.getSeqOfMessageAcked());
+            if (index >= 0) {
+                PeerServer.peerServer.updateIndexAckCount(index);
+            }
             LOG.info("Received an appendEntriesResponse message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
         } else {
             LOG.info("Received message of unknown type " + messageType);

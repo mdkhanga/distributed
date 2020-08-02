@@ -48,12 +48,24 @@ public class AppendEntriesMessage {
         return entries;
     }
 
+    public LogEntry getLogEntry() {
+        return entries.size() == 1 ? entries.get(0) : null;
+    }
+
     public int getLeaderId() {
         return leaderId;
     }
 
     public int getSeqId() {
         return seqId;
+    }
+
+    public int getPrevIndex() {
+        return prevIndex ;
+    }
+
+    public int getLeaderCommitIndex() {
+        return leaderCommitIndex;
     }
 
     public ByteBuffer serialize() throws Exception {

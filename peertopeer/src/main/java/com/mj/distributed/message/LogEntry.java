@@ -1,5 +1,7 @@
 package com.mj.distributed.message;
 
+import com.oracle.tools.packager.Log;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 
@@ -11,6 +13,11 @@ public class LogEntry {
     public LogEntry(int index, int value) {
         this.index = index;
         this.entry = ByteBuffer.allocate(4).putInt(value).array();
+    }
+
+    public LogEntry(int index, byte[] val) {
+        this.index = index;
+        this.entry = val;
     }
 
     byte[] toBytes() throws IOException {

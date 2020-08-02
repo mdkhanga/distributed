@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AppendEntriesMessage;
+import com.mj.distributed.message.LogEntry;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.message.PingMessage;
 import com.mj.distributed.model.Member;
@@ -8,11 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-/*
-import java.net.ServerSocket;
-import java.net.Socket;
-*/
-import java.net.SocketException;
 
 import java.net.InetSocketAddress;
 import java.nio.*;
@@ -22,6 +18,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class PeerServer {
@@ -47,6 +44,11 @@ public class PeerServer {
 
     public static PeerServer peerServer ;
 
+    List<byte[]> rlog = new ArrayList<>();
+    ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
+            new ConcurrentHashMap<>(); // key = index, value = queue of commit responses
+    int lastComittedIndex  = -1 ;
+
     public PeerServer(int id) {
 
         serverId = id ;
@@ -69,8 +71,6 @@ public class PeerServer {
         }
 
 
-
-
         if (seed != null) {
             for (String s : seed) {
 
@@ -85,9 +85,13 @@ public class PeerServer {
             }
         }
 
+        if (leader) {
+            Thread writerThread = new Thread(new ServerWriteRunnable());
+            writerThread.start();
 
-        Thread writerThread = new Thread(new ServerWriteRunnable()) ;
-        writerThread.start();
+            Thread clientThread = new Thread(new ClientSimulator());
+            clientThread.start();
+        }
 
         accept() ;
 
@@ -312,10 +316,24 @@ public class PeerServer {
                     channelPeerMap.forEach((k,v)->{
 
                         try {
-                            // PingMessage p = new PingMessage(serverId,v.getNextSeq()) ;
-                            AppendEntriesMessage p = new AppendEntriesMessage(1, v.getNextSeq());
-                            ByteBuffer b = p.serialize() ;
-                            v.addWriteBuffer(b);
+
+
+                            AppendEntriesMessage p = new AppendEntriesMessage(1,
+                                    v.getNextSeq(),
+                                    rlog.size()-1,
+                                    lastComittedIndex);
+
+                            int index = getIndexToReplicate(v) ;
+                            if (index > 0) {
+                                byte[] data = rlog.get(index);
+                                LogEntry entry = new LogEntry(index, data);
+                                p.addLogEntry(entry);
+                            }
+
+
+                            v.addMessageForPeer(p);
+                            /* ByteBuffer b = p.serialize() ;
+                            v.addWriteBuffer(b); */
 
                         } catch(Exception e) {
                             LOG.error("error" ,e) ;
@@ -331,7 +349,8 @@ public class PeerServer {
 
 
 
-                    logCluster();
+                    // logCluster();
+                    logRlog() ;
 
                 } catch(Exception e) {
                     // System.out.println(e) ;
@@ -384,9 +403,93 @@ public class PeerServer {
 
     }
 
+    public void logRlog() throws Exception {
+
+        StringBuilder sb = new StringBuilder("Replicated Log [") ;
+
+        LOG.info("number of entries "+rlog.size()) ;
+
+        rlog.forEach((k)->{
+
+            try {
+
+                sb.append(ByteBuffer.wrap(k).getInt()) ;
+                sb.append(",") ;
+
+
+            } catch(Exception e) {
+                LOG.error("Error getting remote address ",e) ;
+            }
+
+        });
+
+        sb.append("]") ;
+
+        LOG.info(sb.toString()) ;
+        LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
+
+    }
+
     public void consumeMessage(Message message) {
 
 
     }
 
+    public class ClientSimulator implements Runnable {
+
+        Random r = new Random() ;
+
+        public void run()  {
+
+            try {
+
+                Thread.sleep(30000);
+                int i = 0;
+
+                while (i < 10) {
+
+                    Thread.sleep(10000);
+                    int value = (int)(Math.random()*100);
+                    rlog.add(ByteBuffer.allocate(4).putInt(value).array());
+                    i++;
+
+                }
+
+            } catch(Exception e) {
+                LOG.error("Error in client simulator thread",e);
+            }
+        }
+
+    }
+
+    private int getIndexToReplicate(PeerData d) {
+
+        int maxIndex = rlog.size() - 1 ;
+
+        int nextPotentialIndex = d.getNextIndexToReplicate() ;
+
+        return nextPotentialIndex < maxIndex ? nextPotentialIndex : -1 ;
+    }
+
+    public void updateIndexAckCount(int index) {
+
+
+        if (lastComittedIndex >= index) {
+            ackCountMap.remove(index);
+        }
+
+        ConcurrentLinkedQueue<Integer> indexQueue = ackCountMap.get(index) ;
+        if (indexQueue == null) {
+            // already committed
+            return ;
+        }
+
+        indexQueue.add(1) ;
+
+        if (indexQueue.size() > members.size()/2 ) {
+            lastComittedIndex = index ;
+            ackCountMap.remove(index) ;
+
+        }
+    }
 }
