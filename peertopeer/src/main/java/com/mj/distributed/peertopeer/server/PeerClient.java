@@ -44,7 +44,7 @@ public class PeerClient {
 
     Selector selector ;
 
-    ExecutorService peerClientExecutor = Executors.newSingleThreadExecutor() ;
+    ExecutorService peerClientExecutor = Executors.newFixedThreadPool(2) ;
 
     public Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
@@ -76,6 +76,8 @@ public class PeerClient {
 
         PeerClientCallable peerClientCallable = new PeerClientCallable(this) ;
         peerClientExecutor.submit(peerClientCallable) ;
+       PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
+        peerClientExecutor.submit(peerClientStatusCallable);
 
     }
 
@@ -87,20 +89,31 @@ public class PeerClient {
 
         if (e != null) {
 
+            // LOG.info("We have an entry") ;
+
             int position = e.getIndex();
             byte[] data = e.getEntry();
 
+            // LOG.info("Received log entry " + ByteBuffer.wrap(data).getInt());
+
             int expectedNextEntry = rlog.size();
 
+            // LOG.info("prev = " + prevIndex + " expectedNext = " + expectedNextEntry) ;
             if (prevIndex + 1 == expectedNextEntry) {
-                rlog.add(data);
+                synchronized (rlog) {
+                    rlog.add(data);
+                    // LOG.info("added to rlog") ;
+                }
                 ret = true ;
             } else {
                 ret = false ;
+                // LOG.info("did not add to rlog return false") ;
             }
+        } else {
+            // LOG.info("No entry") ;
         }
 
-        if (lastComittedIndex > this.lastComittedIndex && lastComittedIndex < rlog.size()) {
+        if (ret == true && lastComittedIndex > this.lastComittedIndex && lastComittedIndex < rlog.size()) {
             this.lastComittedIndex = lastComittedIndex ;
         }
 
@@ -278,4 +291,49 @@ public class PeerClient {
 
     }
 
+    public class PeerClientStatusCallable implements Callable<Void> {
+
+        public Void call() throws Exception {
+
+            while(true) {
+
+                Thread.sleep(5000) ;
+
+                logRlog();
+
+            }
+
+        }
+
+    }
+
+    public void logRlog() throws Exception {
+
+        StringBuilder sb = new StringBuilder("Replicated Log [") ;
+
+
+        synchronized (rlog) {
+            // LOG.info("number of entries "+rlog.size()) ;
+        }
+
+        rlog.forEach((k)->{
+
+            try {
+
+                sb.append(ByteBuffer.wrap(k).getInt()) ;
+                sb.append(",") ;
+
+
+            } catch(Exception e) {
+                LOG.error("Error getting remote address ",e) ;
+            }
+
+        });
+
+        sb.append("]") ;
+
+        LOG.info(sb.toString()) ;
+        LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
+
+    }
 }

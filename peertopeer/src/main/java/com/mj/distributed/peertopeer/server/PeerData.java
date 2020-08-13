@@ -98,10 +98,19 @@ public class PeerData {
         lastIndexReplicated = i;
     }
 
-    public int getNextIndexToReplicate() {
+    public int getNextIndexToReplicate(int maxIndex) {
 
         int ret = lastIndexReplicated + 1 ;
-        return ret ;
+
+        System.out.println("ret == " + ret + "  and max == " + maxIndex) ;
+
+        if (ret <= maxIndex) {
+            ++lastIndexReplicated;
+            return ret ;
+        }
+
+
+        return -1 ;
     }
 
     public int getIndexAcked(int seqId) {

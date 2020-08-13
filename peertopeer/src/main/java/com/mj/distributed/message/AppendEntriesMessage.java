@@ -64,6 +64,10 @@ public class AppendEntriesMessage {
         return prevIndex ;
     }
 
+    public void setPrevIndex(int i) {
+        prevIndex = i;
+    }
+
     public int getLeaderCommitIndex() {
         return leaderCommitIndex;
     }
@@ -79,9 +83,11 @@ public class AppendEntriesMessage {
         d.writeInt(prevIndex);
         d.writeInt(leaderCommitIndex);
 
+        // LOG.info("Ser Entries size "+ entries.size());
+        d.writeInt(entries.size());
         if (entries.size() > 0) {
 
-            d.writeInt(entries.size());
+            // d.writeInt(entries.size());
 
             entries.forEach((e)->{
                 try {
@@ -118,13 +124,14 @@ public class AppendEntriesMessage {
         AppendEntriesMessage newMsg = new AppendEntriesMessage(leaderId, seqId, prevIndex, leaderCommitIndex);
 
         int numEntries = b.getInt() ;
-        // LOG.info("num log entries " + numEntries) ;
+        // LOG.info("Deser num log entries " + numEntries) ;
 
         while (numEntries > 0) {
             // LOG.info("reading entries") ;
             int size = b.getInt();
             byte[] entrybytes = new byte[size];
-            b = b.get(entrybytes, b.position(), size);
+            int position = b.position() ;
+            b = b.get(entrybytes, 0, size);
             newMsg.addLogEntry(LogEntry.fromBytes(entrybytes));
             --numEntries;
         }

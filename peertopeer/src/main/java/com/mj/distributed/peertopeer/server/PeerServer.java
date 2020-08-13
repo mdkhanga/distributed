@@ -324,14 +324,26 @@ public class PeerServer {
                                     lastComittedIndex);
 
                             int index = getIndexToReplicate(v) ;
-                            if (index > 0) {
+
+                            LOG.info("Index to replicate "+ index);
+
+                            if (index >= 0 && index < rlog.size()) {
                                 byte[] data = rlog.get(index);
+                                LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
                                 LogEntry entry = new LogEntry(index, data);
                                 p.addLogEntry(entry);
+                                p.setPrevIndex(index-1);
+                            }
+
+                            if (p.getLogEntries().size() == 0) {
+                                LOG.info("Sending msg with no entry") ;
+                            } else {
+                                LOG.info("Sending msg with entry") ;
                             }
 
 
                             v.addMessageForPeer(p);
+                            ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());
                             /* ByteBuffer b = p.serialize() ;
                             v.addWriteBuffer(b); */
 
@@ -407,7 +419,7 @@ public class PeerServer {
 
         StringBuilder sb = new StringBuilder("Replicated Log [") ;
 
-        LOG.info("number of entries "+rlog.size()) ;
+        // LOG.info("number of entries "+rlog.size()) ;
 
         rlog.forEach((k)->{
 
@@ -464,11 +476,11 @@ public class PeerServer {
 
     private int getIndexToReplicate(PeerData d) {
 
-        int maxIndex = rlog.size() - 1 ;
+        int maxIndex = rlog.size() - 1  ;
 
-        int nextPotentialIndex = d.getNextIndexToReplicate() ;
+        return d.getNextIndexToReplicate(maxIndex) ;
 
-        return nextPotentialIndex < maxIndex ? nextPotentialIndex : -1 ;
+
     }
 
     public void updateIndexAckCount(int index) {
@@ -481,12 +493,15 @@ public class PeerServer {
         ConcurrentLinkedQueue<Integer> indexQueue = ackCountMap.get(index) ;
         if (indexQueue == null) {
             // already committed
+            // LOG.info("No Ack queue. Already comitted") ;
             return ;
         }
 
         indexQueue.add(1) ;
+        // LOG.info("Incrementing index q") ;
 
-        if (indexQueue.size() > members.size()/2 ) {
+        if (indexQueue.size() >= members.size()/2 ) {
+            // LOG.info("Updating last comitted index");
             lastComittedIndex = index ;
             ackCountMap.remove(index) ;
 

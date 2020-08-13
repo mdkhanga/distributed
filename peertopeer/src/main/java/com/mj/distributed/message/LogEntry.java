@@ -1,6 +1,5 @@
 package com.mj.distributed.message;
 
-import com.oracle.tools.packager.Log;
 
 import java.io.*;
 import java.nio.ByteBuffer;

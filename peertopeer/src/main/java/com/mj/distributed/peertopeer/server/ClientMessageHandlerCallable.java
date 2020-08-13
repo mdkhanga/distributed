@@ -51,12 +51,13 @@ public class ClientMessageHandlerCallable implements Callable {
                 LOG.info("Received AppendEntries message from " + message.getLeaderId() + " seq :" + message.getSeqId());
 
                 boolean entryResult = true ;
-                List<LogEntry> data = message.getLogEntries() ;
-                LogEntry e = null ;
-                if (data.size() != 0) {
-                     e = data.get(0) ;
-                }
+                LogEntry e = message.getLogEntry() ;
 
+                if (e != null) {
+                    // LOG.info("New message has an entry") ;
+                } else {
+                    // LOG.info("New message has no entry") ;
+                }
 
                 entryResult = peerClient.processLogEntry(e,message.getPrevIndex(),message.getLeaderCommitIndex()) ;
                 AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, entryResult);
