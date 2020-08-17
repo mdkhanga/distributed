@@ -105,6 +105,9 @@ public class PeerClient {
                     // LOG.info("added to rlog") ;
                 }
                 ret = true ;
+                if (lastComittedIndex <= expectedNextEntry) {
+                    this.lastComittedIndex = lastComittedIndex;
+                }
             } else {
                 ret = false ;
                 // LOG.info("did not add to rlog return false") ;
@@ -113,8 +116,8 @@ public class PeerClient {
             // LOG.info("No entry") ;
         }
 
-        if (ret == true && lastComittedIndex > this.lastComittedIndex && lastComittedIndex < rlog.size()) {
-            this.lastComittedIndex = lastComittedIndex ;
+        if (lastComittedIndex < rlog.size()) {
+            this.lastComittedIndex = lastComittedIndex;
         }
 
         return ret ;
@@ -312,9 +315,6 @@ public class PeerClient {
         StringBuilder sb = new StringBuilder("Replicated Log [") ;
 
 
-        synchronized (rlog) {
-            // LOG.info("number of entries "+rlog.size()) ;
-        }
 
         rlog.forEach((k)->{
 
