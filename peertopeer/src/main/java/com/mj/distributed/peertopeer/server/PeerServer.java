@@ -317,7 +317,8 @@ public class PeerServer {
 
                         try {
 
-
+                            sendAppendEntriesMessage(v);
+                            /*
                             AppendEntriesMessage p = new AppendEntriesMessage(1,
                                     v.getNextSeq(),
                                     rlog.size()-1,
@@ -344,8 +345,7 @@ public class PeerServer {
 
                             v.addMessageForPeer(p);
                             ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());
-                            /* ByteBuffer b = p.serialize() ;
-                            v.addWriteBuffer(b); */
+                            */
 
                         } catch(Exception e) {
                             LOG.error("error" ,e) ;
@@ -371,6 +371,37 @@ public class PeerServer {
 
         }
 
+
+    }
+
+    public void sendAppendEntriesMessage(PeerData v) throws Exception {
+
+        AppendEntriesMessage p = new AppendEntriesMessage(1,
+                v.getNextSeq(),
+                rlog.size()-1,
+                lastComittedIndex);
+
+        int index = getIndexToReplicate(v) ;
+
+        LOG.info("Index to replicate "+ index);
+
+        if (index >= 0 && index < rlog.size()) {
+            byte[] data = rlog.get(index);
+            LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
+            LogEntry entry = new LogEntry(index, data);
+            p.addLogEntry(entry);
+            p.setPrevIndex(index-1);
+        }
+
+        if (p.getLogEntries().size() == 0) {
+            LOG.info("Sending msg with no entry") ;
+        } else {
+            LOG.info("Sending msg with entry") ;
+        }
+
+
+        v.addMessageForPeer(p);
+        ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());
 
     }
 
