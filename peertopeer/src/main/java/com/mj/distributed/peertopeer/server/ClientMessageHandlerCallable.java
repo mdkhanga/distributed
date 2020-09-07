@@ -1,12 +1,12 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.*;
+import com.mj.distributed.model.LogEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 public class ClientMessageHandlerCallable implements Callable {

@@ -1,12 +1,9 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AppendEntriesMessage;
-import com.mj.distributed.message.LogEntry;
+import com.mj.distributed.model.LogEntry;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;

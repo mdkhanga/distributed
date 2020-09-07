@@ -3,7 +3,7 @@ package com.mj.distributed.peertopeer.server;
 
 
 import com.mj.distributed.message.HelloMessage;
-import com.mj.distributed.message.LogEntry;
+import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
 import org.slf4j.LoggerFactory ;
 import org.slf4j.Logger ;
@@ -232,7 +232,7 @@ public class PeerClient {
 
             clientChannel.finishConnect() ;
             key.interestOps(SelectionKey.OP_WRITE) ;
-            peerServer.addPeer(remoteHost+":"+remotePort) ;
+            // peerServer.addPeer(remoteHost+":"+remotePort) ;
         }
 
         private void write(SelectionKey key) throws IOException {
@@ -286,7 +286,7 @@ public class PeerClient {
                 key.cancel();
                 String s = remoteHost +":"+remotePort ;
                 LOG.info(s + " has left the cluster") ;
-                peerServer.removePeer(s);
+                // peerServer.removePeer(s);
 
             }
 

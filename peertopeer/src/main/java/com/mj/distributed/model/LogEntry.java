@@ -1,4 +1,4 @@
-package com.mj.distributed.message;
+package com.mj.distributed.model;
 
 
 import java.io.*;
@@ -19,7 +19,7 @@ public class LogEntry {
         this.entry = val;
     }
 
-    byte[] toBytes() throws IOException {
+    public byte[] toBytes() throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(out);
         d.writeInt(index);

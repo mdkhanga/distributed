@@ -1,9 +1,10 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AppendEntriesMessage;
-import com.mj.distributed.message.LogEntry;
+import com.mj.distributed.message.ClusterInfoMessage;
+import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
-import com.mj.distributed.message.PingMessage;
+import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.Member;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,6 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 public class PeerServer {
 
@@ -29,7 +29,9 @@ public class PeerServer {
     private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
 
-   private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
+   // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
+
+    ClusterInfo clusterInfo = new ClusterInfo();
 
     Integer x = 0 ;
 
@@ -67,6 +69,7 @@ public class PeerServer {
         if (leader) {
 
             // initiate connect to peers
+            clusterInfo.addMember(new Member(bindHost, bindPort, true));
 
         }
 
@@ -111,7 +114,7 @@ public class PeerServer {
 
         LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
 
-        addPeer(bindHost+":"+bindPort) ;
+        // addPeer(bindHost+":"+bindPort) ;
         // ServerSocket s = new ServerSocket(port) ;
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
         serverSocketChannel.configureBlocking(false) ;
@@ -234,7 +237,8 @@ public class PeerServer {
 
             LOG.info(p.getHostString() +":" +p.getPort() + " has left the cluster") ;
             channelPeerMap.remove(sc) ;
-            members.remove(p.getHostString()+":"+p.getPort()) ;
+            removePeer(p.getHostString(), p.getPort());
+            // members.remove(p.getHostString()+":"+p.getPort()) ;
         }
 
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
@@ -405,22 +409,26 @@ public class PeerServer {
 
     }
 
+    public void sendClusterInfoMessage(PeerData v) {
+        ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
+        v.addMessageForPeer(ClusterInfoMessage);
 
-    public void removePeer(String m) {
-        members.remove(m) ;
-        // logCluster();
     }
 
-    public void addPeer(String m) {
 
-        members.add(m) ;
+     public void removePeer(String hostString, int port) {
+       clusterInfo.removeMember(hostString, port);
+    }
+
+    public void addPeer(String hostString, int port) {
+        clusterInfo.addMember(new Member(hostString, port, false));
     }
 
     public PeerData getPeerData(SocketChannel s) {
         return channelPeerMap.get(s) ;
     }
 
-    public void logCluster() throws Exception {
+    /* public void logCluster() throws Exception {
 
         StringBuilder sb = new StringBuilder("Cluster members [") ;
 
@@ -444,7 +452,7 @@ public class PeerServer {
 
         LOG.info(sb.toString()) ;
 
-    }
+    } */
 
     public void logRlog() throws Exception {
 
@@ -531,8 +539,8 @@ public class PeerServer {
         indexQueue.add(1) ;
         // LOG.info("Incrementing index q") ;
 
-        if (indexQueue.size() >= members.size()/2 ) {
-            // LOG.info("Updating last comitted index");
+        // if (indexQueue.size() >= members.size()/2 ) {
+        if (indexQueue.size() >= channelPeerMap.size()/2 ) {
             lastComittedIndex = index ;
             ackCountMap.remove(index) ;
 
