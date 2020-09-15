@@ -10,7 +10,7 @@ import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-public class HelloMessage {
+public class HelloMessage implements Message {
 
     private int messageType = 1 ;
     private String greeting = "Hello" ;

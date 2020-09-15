@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by manoj on 6/18/17.
  */
-public class AppendEntriesResponse {
+public class AppendEntriesResponse implements Message {
 
     private static int messageType = 5 ;
     private int seqOfMessageAcked ;

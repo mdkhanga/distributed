@@ -63,6 +63,12 @@ public class ClientMessageHandlerCallable implements Callable {
                 AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, entryResult);
                 ByteBuffer b = resp.serialize();
                 peerClient.queueSendMessage(b);
+            } else if (messageType == 6) {
+
+                ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
+                LOG.info(message.toString());
+
+
             }
 
         } catch(Exception e) {

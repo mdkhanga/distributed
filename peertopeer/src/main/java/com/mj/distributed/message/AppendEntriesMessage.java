@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AppendEntriesMessage {
+public class AppendEntriesMessage implements Message {
 
     private static int messageType = 4;
 

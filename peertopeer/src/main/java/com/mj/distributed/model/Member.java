@@ -58,5 +58,16 @@ public class Member {
 
     }
 
+    public String toString() {
+        StringBuilder b = new StringBuilder() ;
+        b.append("[");
+        b.append(hostString);
+        b.append(",");
+        b.append(port);
+        b.append(",");
+        b.append(leader);
+        b.append("]");
+        return b.toString();
 
+    }
 }

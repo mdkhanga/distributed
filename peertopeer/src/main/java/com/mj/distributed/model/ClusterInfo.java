@@ -88,4 +88,14 @@ public class ClusterInfo {
         }
     }
 
+    public String toString() {
+        StringBuilder b = new StringBuilder();
+        b.append("[");
+        members.forEach((m)->{
+           b.append(m.toString());
+        });
+        b.append("]");
+
+        return b.toString();
+    }
 }

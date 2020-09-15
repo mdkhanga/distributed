@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by manoj on 6/18/17.
  */
-public class PingMessage {
+public class PingMessage implements Message {
 
     private static int messageType = 2 ;
     private int serverId ; // server sending ping

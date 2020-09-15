@@ -20,6 +20,7 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
 
@@ -312,6 +313,8 @@ public class PeerServer {
 
         public void run() {
 
+            AtomicInteger count = new AtomicInteger(1) ;
+
             while(true) {
 
                 try {
@@ -321,35 +324,12 @@ public class PeerServer {
 
                         try {
 
-                            sendAppendEntriesMessage(v);
-                            /*
-                            AppendEntriesMessage p = new AppendEntriesMessage(1,
-                                    v.getNextSeq(),
-                                    rlog.size()-1,
-                                    lastComittedIndex);
+                            // sendAppendEntriesMessage(v);
 
-                            int index = getIndexToReplicate(v) ;
-
-                            LOG.info("Index to replicate "+ index);
-
-                            if (index >= 0 && index < rlog.size()) {
-                                byte[] data = rlog.get(index);
-                                LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
-                                LogEntry entry = new LogEntry(index, data);
-                                p.addLogEntry(entry);
-                                p.setPrevIndex(index-1);
+                            if (count.get() % 3 == 0) {
+                                sendClusterInfoMessage(v);
                             }
 
-                            if (p.getLogEntries().size() == 0) {
-                                LOG.info("Sending msg with no entry") ;
-                            } else {
-                                LOG.info("Sending msg with entry") ;
-                            }
-
-
-                            v.addMessageForPeer(p);
-                            ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());
-                            */
 
                         } catch(Exception e) {
                             LOG.error("error" ,e) ;
@@ -367,6 +347,7 @@ public class PeerServer {
 
                     // logCluster();
                     logRlog() ;
+                    count.incrementAndGet() ;
 
                 } catch(Exception e) {
                     // System.out.println(e) ;
@@ -409,9 +390,9 @@ public class PeerServer {
 
     }
 
-    public void sendClusterInfoMessage(PeerData v) {
+    public void sendClusterInfoMessage(PeerData v) throws Exception {
         ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
-        v.addMessageForPeer(ClusterInfoMessage);
+        v.addMessageForPeer(cm);
 
     }
 

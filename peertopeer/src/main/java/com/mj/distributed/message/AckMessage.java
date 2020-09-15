@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by manoj on 6/18/17.
  */
-public class AckMessage  {
+public class AckMessage implements Message {
 
     private static int messageType = 3 ;
     private int seqOfMessageAcked ;

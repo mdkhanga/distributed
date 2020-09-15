@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AppendEntriesMessage;
+import com.mj.distributed.message.Message;
 import com.mj.distributed.model.LogEntry;
 
 import java.nio.ByteBuffer;
@@ -51,13 +52,19 @@ public class PeerData {
         writeQueue.add(b) ;
     }
 
-    public void addMessageForPeer(AppendEntriesMessage msg) throws Exception {
-
+    // public void addMessageForPeer(AppendEntriesMessage msg) throws Exception {
+    public void addMessageForPeer(Message msg) throws Exception {
        // List<LogEntry> entries = msg.getLogEntries() ;
-        LogEntry e = msg.getLogEntry() ;
 
-        if (e != null) {
-            seqIdLogIndexMap.put(msg.getSeqId(), e.getIndex());
+        if ( msg instanceof AppendEntriesMessage) {
+
+            AppendEntriesMessage amsg = (AppendEntriesMessage)msg ;
+
+            LogEntry e = amsg.getLogEntry();
+
+            if (e != null) {
+                seqIdLogIndexMap.put(amsg.getSeqId(), e.getIndex());
+            }
         }
         ByteBuffer b = msg.serialize() ;
         addWriteBuffer(b);

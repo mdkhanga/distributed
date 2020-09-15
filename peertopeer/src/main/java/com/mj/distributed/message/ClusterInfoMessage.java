@@ -6,7 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
-public class ClusterInfoMessage {
+public class ClusterInfoMessage implements Message {
 
     private static int messageType = 6 ;
 
@@ -53,5 +53,9 @@ public class ClusterInfoMessage {
 
         return new ClusterInfoMessage(ClusterInfo.fromBytes(clusterbytes));
 
+    }
+
+    public String toString() {
+        return clusterInfo.toString();
     }
 }
