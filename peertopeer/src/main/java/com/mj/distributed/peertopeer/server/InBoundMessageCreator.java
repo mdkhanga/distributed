@@ -63,7 +63,13 @@ public class InBoundMessageCreator {
 
             if (!prevreadpartial) {
                 messagesize = readBuffer.getInt();
+
+               // LOG.info("messagesize = "+ messagesize) ;
+                // LOG.info("numBytes = " + numbytes) ;
+
                 int messageBytesRead = numbytes -4 ;
+
+                // LOG.info("messageBytesRead = " + messageBytesRead) ;
 
 
                 if (messagesize == messageBytesRead) {
@@ -81,6 +87,7 @@ public class InBoundMessageCreator {
             } else {
 
                 // start reading and adding to partial message from last read
+                LOG.info("Seems like a partial message") ;
 
 
             }

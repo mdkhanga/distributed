@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 public class LogEntry {
 
     private int index;
+    private int term ;
     private byte[] entry;
 
     public LogEntry(int index, int value) {

@@ -9,15 +9,10 @@ import java.nio.ByteBuffer;
  */
 public class AppendEntriesResponse implements Message {
 
-    private static int messageType = 5 ;
+    private static MessageType messageType = MessageType.AppendEntriesResponse ;
     private int seqOfMessageAcked ;
     private int term;
     private int success; // 1 = true, 0 = false
-
-    public int getMessageTypeId() {
-        return messageType ;
-    }
-
 
     public AppendEntriesResponse() {
 
@@ -53,7 +48,7 @@ public class AppendEntriesResponse implements Message {
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
-        d.writeInt(messageType);
+        d.writeInt(messageType.value());
         d.writeInt(seqOfMessageAcked) ;
         d.writeByte(success);
         d.writeInt(term);
@@ -76,7 +71,7 @@ public class AppendEntriesResponse implements Message {
 
         int type = b.getInt() ;
 
-        if (type != messageType) {
+        if (type != messageType.value()) {
             throw new RuntimeException("Not a append Response message "+ type) ;
         }
 

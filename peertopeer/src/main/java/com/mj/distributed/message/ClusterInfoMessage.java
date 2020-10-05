@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 
 public class ClusterInfoMessage implements Message {
 
-    private static int messageType = 6 ;
+    private static MessageType messageType = MessageType.ClusterInfo ;
 
     private ClusterInfo clusterInfo;
 
@@ -25,7 +25,7 @@ public class ClusterInfoMessage implements Message {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
 
-        d.writeInt(messageType);
+        d.writeInt(messageType.value());
         byte[] clusterinfobytes = clusterInfo.toBytes();
         d.writeInt(clusterinfobytes.length);
         d.write(clusterinfobytes);
@@ -43,7 +43,7 @@ public class ClusterInfoMessage implements Message {
         int messagesize = b.getInt() ;
         // LOG.info("Received message of size " + messagesize) ;
         int type = b.getInt() ;
-        if (messageType != type) {
+        if (messageType.value() != type) {
             throw new RuntimeException("Message is not the expected type ClusterInfoMessage") ;
         }
 

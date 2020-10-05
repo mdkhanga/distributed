@@ -1,5 +1,6 @@
 package com.mj.distributed.message;
 
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,13 +12,9 @@ import java.nio.ByteBuffer;
  */
 public class PingMessage implements Message {
 
-    private static int messageType = 2 ;
+    private static MessageType messageType = MessageType.Ping ;
     private int serverId ; // server sending ping
     private int seqId ;
-
-    public long getMessageTypeId() {
-        return messageType ;
-    }
 
     public PingMessage() {
 
@@ -33,7 +30,7 @@ public class PingMessage implements Message {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
 
-        d.writeInt(messageType);
+        d.writeInt(messageType.value());
         d.writeInt(serverId);
         d.writeInt(seqId);
 
@@ -55,7 +52,7 @@ public class PingMessage implements Message {
 
 
         int mType = readBuffer.getInt() ;
-        if (mType != messageType) {
+        if (mType != messageType.value()) {
             throw new RuntimeException("Not a ping message "+ mType) ;
         }
 

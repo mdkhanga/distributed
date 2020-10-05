@@ -1,27 +1,23 @@
 package com.mj.distributed.message;
 
-import com.mj.distributed.peertopeer.server.PeerServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-public class HelloMessage implements Message {
+public class RequestVoteMessage implements Message {
 
-    // private int messageType = 1 ;
-    private MessageType messageType = MessageType.Hello ;
+    private int messageType = 1 ;
     private String greeting = "Hello" ;
     private String hostString ;
     private int hostPort ;
     private int recordsize ;
 
-    private static Logger LOG  = LoggerFactory.getLogger(HelloMessage.class) ;
+    private static Logger LOG  = LoggerFactory.getLogger(RequestVoteMessage.class) ;
 
-    public HelloMessage(String host,int port) {
+    public RequestVoteMessage(String host, int port) {
 
         this.hostString = host ;
         this.hostPort = port ;
@@ -49,7 +45,7 @@ public class HelloMessage implements Message {
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
-        d.writeInt(messageType.value());
+        d.writeInt(messageType);
         d.writeInt(greetingBytes.length);
         d.write(greetingBytes);
         d.writeInt(hostStringBytes.length);
@@ -68,7 +64,7 @@ public class HelloMessage implements Message {
         return retBuffer ;
     }
 
-    public static HelloMessage deserialize(ByteBuffer readBuffer) {
+    public static RequestVoteMessage deserialize(ByteBuffer readBuffer) {
 
         int messagesize = readBuffer.getInt() ;
         LOG.info("Received message of size " + messagesize) ;
@@ -94,7 +90,7 @@ public class HelloMessage implements Message {
         int port = readBuffer.getInt() ;
         LOG.info("and port "+port) ;
 
-        return new HelloMessage(hostString,port) ;
+        return new RequestVoteMessage(hostString,port) ;
     }
 
 }

@@ -2,6 +2,7 @@ package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.AppendEntriesMessage;
 import com.mj.distributed.message.ClusterInfoMessage;
+import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.model.ClusterInfo;
@@ -51,6 +52,9 @@ public class PeerServer {
     ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
             new ConcurrentHashMap<>(); // key = index, value = queue of commit responses
     int lastComittedIndex  = -1 ;
+    int currentTerm = 0;
+
+    Long lastLeaderHeartBeatTs = 0L ;
 
     public PeerServer(int id) {
 
@@ -82,9 +86,11 @@ public class PeerServer {
                 String[] remoteaddrAndPort = s.split(":") ;
 
                 LOG.info("Connecting to " + seed) ;
-                // Socket p = new Socket(remoteaddrAndPort[0], Integer.parseInt(remoteaddrAndPort[1]));
                 PeerClient peer = new PeerClient(remoteaddrAndPort[0],Integer.parseInt(remoteaddrAndPort[1]),this);
                 peer.start();
+                HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort());
+                peer.queueSendMessage(m.serialize());
+                LOG.info("Done write hello to q") ;
 
             }
         }
@@ -197,6 +203,7 @@ public class PeerServer {
 
         InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
 
+        LOG.info("accepted connection from " + socketAddress.getHostString());
         channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
 
 
@@ -307,6 +314,18 @@ public class PeerServer {
         peerServer.start(seeds) ;
     }
 
+    public void setLastLeaderHeartBeatTs(long ts) {
+        synchronized (lastLeaderHeartBeatTs) {
+            lastLeaderHeartBeatTs = ts;
+        }
+    }
+
+    public long getlastLeaderHeartBeatts() {
+        synchronized (lastLeaderHeartBeatTs) {
+            return lastLeaderHeartBeatTs ;
+        }
+    }
+
 
     public class ServerWriteRunnable implements Runnable {
 
@@ -324,9 +343,10 @@ public class PeerServer {
 
                         try {
 
-                            // sendAppendEntriesMessage(v);
+                            sendAppendEntriesMessage(v);
 
                             if (count.get() % 3 == 0) {
+                                logRlog() ;
                                 sendClusterInfoMessage(v);
                             }
 
@@ -342,11 +362,7 @@ public class PeerServer {
                     }
 
                     selector.wakeup() ;
-
-
-
-                    // logCluster();
-                    logRlog() ;
+                   // logRlog() ;
                     count.incrementAndGet() ;
 
                 } catch(Exception e) {
@@ -368,22 +384,15 @@ public class PeerServer {
 
         int index = getIndexToReplicate(v) ;
 
-        LOG.info("Index to replicate "+ index);
+        // LOG.info("Index to replicate "+ index);
 
         if (index >= 0 && index < rlog.size()) {
             byte[] data = rlog.get(index);
-            LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
+           // LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
             LogEntry entry = new LogEntry(index, data);
             p.addLogEntry(entry);
             p.setPrevIndex(index-1);
         }
-
-        if (p.getLogEntries().size() == 0) {
-            LOG.info("Sending msg with no entry") ;
-        } else {
-            LOG.info("Sending msg with entry") ;
-        }
-
 
         v.addMessageForPeer(p);
         ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());

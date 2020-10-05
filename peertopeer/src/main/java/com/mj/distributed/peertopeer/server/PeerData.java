@@ -106,8 +106,6 @@ public class PeerData {
 
         int ret = lastIndexReplicated + 1 ;
 
-        System.out.println("ret == " + ret + "  and max == " + maxIndex) ;
-
         if (ret <= maxIndex) {
             ++lastIndexReplicated;
             return ret ;

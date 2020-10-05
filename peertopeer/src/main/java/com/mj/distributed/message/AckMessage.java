@@ -11,13 +11,8 @@ import java.nio.ByteBuffer;
  */
 public class AckMessage implements Message {
 
-    private static int messageType = 3 ;
+    private static MessageType messageType = MessageType.Ack ;
     private int seqOfMessageAcked ;
-
-    public int getMessageTypeId() {
-        return messageType ;
-    }
-
 
     public AckMessage() {
 
@@ -35,7 +30,7 @@ public class AckMessage implements Message {
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
-        d.writeInt(messageType);
+        d.writeInt(messageType.value());
         d.writeInt(seqOfMessageAcked) ;
 
         byte[] ackMsgArray = b.toByteArray();
@@ -56,7 +51,7 @@ public class AckMessage implements Message {
 
         int type = b.getInt() ;
 
-        if (type != messageType) {
+        if (type != messageType.value()) {
             throw new RuntimeException("Not a ping message "+ type) ;
         }
 
@@ -66,7 +61,5 @@ public class AckMessage implements Message {
 
         return r ;
     }
-
-
 
 }

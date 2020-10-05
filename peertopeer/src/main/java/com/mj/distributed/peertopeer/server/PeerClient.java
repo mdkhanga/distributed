@@ -1,7 +1,5 @@
 package com.mj.distributed.peertopeer.server;
 
-
-
 import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
@@ -66,17 +64,23 @@ public class PeerClient {
        this.remotePort = port ;
        this.peerServer = p ;
 
-
     }
-
-
 
 
     public void start() throws Exception {
 
+        selector = Selector.open() ;
+
+        clientChannel = SocketChannel.open();
+        clientChannel.configureBlocking(false);
+
+        clientChannel.connect(new InetSocketAddress(remoteHost, remotePort));
+
+        clientChannel.register(selector, SelectionKey.OP_CONNECT) ;
+
         PeerClientCallable peerClientCallable = new PeerClientCallable(this) ;
         peerClientExecutor.submit(peerClientCallable) ;
-       PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
+        PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
         peerClientExecutor.submit(peerClientStatusCallable);
 
     }
@@ -128,6 +132,10 @@ public class PeerClient {
         // message needs to be queue and sent by a writer thread
     }
 
+    public void setLeaderHeartBeatTs(long ts) {
+        peerServer.setLastLeaderHeartBeatTs(ts);
+    }
+
     public void queueSendMessage(ByteBuffer b) {
 
         writeQueue.add(b) ;
@@ -173,29 +181,46 @@ public class PeerClient {
         @Override
         public Void call() throws Exception {
 
-            selector = Selector.open() ;
+            /* selector = Selector.open() ;
 
             clientChannel = SocketChannel.open();
             clientChannel.configureBlocking(false);
 
             clientChannel.connect(new InetSocketAddress(remoteHost, remotePort));
 
-            clientChannel.register(selector, SelectionKey.OP_CONNECT) ;
+            clientChannel.register(selector, SelectionKey.OP_CONNECT) ; */
 
             int i = 0 ;
 
-            HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
-            writeQueue.add(m.serialize());
+            // HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
+            // writeQueue.add(m.serialize());
 
             while(true) {
+
+               /* if (clientChannel.isConnected()) {
+                    LOG.info("Connected") ;
+                } else {
+                    LOG.info("Not Connected") ;
+                }
+
+                if (writeQueue.peek() != null) {
+                    LOG.info("We have a message to write") ;
+                } else {
+                    LOG.info("No message to write") ;
+                } */
+
 
 
                 if (clientChannel.isConnected() && writeQueue.peek() != null) {
                     clientChannel.register(selector, SelectionKey.OP_WRITE);
+                    // LOG.info("Connected and soemthing to write");
+                } else {
+                   // LOG.info("Connected and nothing to write");
                 }
 
-
-                selector.select() ;
+               // LOG.info("before select");
+                selector.select(3000) ;
+               // LOG.info("after select");
 
                 Iterator<SelectionKey> skeys = selector.selectedKeys().iterator() ;
 
@@ -204,17 +229,21 @@ public class PeerClient {
                     skeys.remove();
 
                     if (!key.isValid()) {
+                        LOG.info("key is not valid") ;
                         continue;
                     }
 
                     // System.out.println("We have a valid key") ;
                     // Check what event is available and deal with it
                     if (key.isConnectable()) {
+                        // LOG.info("trying to conect") ;
                         finishConnection(key);
                     } else if (key.isReadable()) {
+                        // LOG.info("trying to read") ;
                         read(key);
                         // done = true ;
                     } else if (key.isWritable()) {
+                       // LOG.info("trying to write") ;
                         write(key);
                     } else {
                         System.out.println("not handled key") ;
@@ -233,6 +262,7 @@ public class PeerClient {
             clientChannel.finishConnect() ;
             key.interestOps(SelectionKey.OP_WRITE) ;
             // peerServer.addPeer(remoteHost+":"+remotePort) ;
+            LOG.info("finished connection");
         }
 
         private void write(SelectionKey key) throws IOException {
@@ -240,13 +270,24 @@ public class PeerClient {
             ByteBuffer b ;
             b = writeQueue.poll() ;
 
+            if (b != null) {
+                // LOG.info("we got b to write") ;
+            } else {
+
+               // LOG.info("b is null could not get b to write") ;
+                return ;
+            }
+
             int n = clientChannel.write(b) ;
+            // LOG.info("Wrote bytes " + n) ;
             int totalbyteswritten = n ;
             while (n > 0 && b.remaining() > 0) {
                 n = clientChannel.write(b) ;
                 totalbyteswritten = totalbyteswritten + n ;
 
             }
+
+           // LOG.info("Wrote bytes " + totalbyteswritten) ;
 
             key.interestOps(SelectionKey.OP_READ) ;
         }

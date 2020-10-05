@@ -12,7 +12,7 @@ import java.util.List;
 
 public class AppendEntriesMessage implements Message {
 
-    private static int messageType = 4;
+    private static MessageType messageType = MessageType.AppendEntries;
 
     private int leaderId = 1;
 
@@ -78,7 +78,7 @@ public class AppendEntriesMessage implements Message {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
 
-        d.writeInt(messageType);
+        d.writeInt(messageType.value());
         d.writeInt(leaderId);
         d.writeInt(seqId);
         d.writeInt(prevIndex);
@@ -113,7 +113,7 @@ public class AppendEntriesMessage implements Message {
         int messagesize = b.getInt() ;
         // LOG.info("Received message of size " + messagesize) ;
         int type = b.getInt() ;
-        if (messageType != type) {
+        if (messageType.value() != type) {
             throw new RuntimeException("Message is not the expected type AppendEntriesMessage") ;
         }
 
