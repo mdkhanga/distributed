@@ -47,7 +47,7 @@ public class ClientMessageHandlerCallable implements Callable {
             } else if (messageType == MessageType.AppendEntries.value()) {
 
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
-                LOG.info("Received AppendEntries message from " + message.getLeaderId() + " seq :" + message.getSeqId());
+                // LOG.info("Received AppendEntries message from " + message.getLeaderId() + " seq :" + message.getSeqId());
                 peerClient.setLeaderHeartBeatTs(System.currentTimeMillis());
                 boolean entryResult = true ;
                 LogEntry e = message.getLogEntry() ;
@@ -59,7 +59,7 @@ public class ClientMessageHandlerCallable implements Callable {
             } else if (messageType == MessageType.ClusterInfo.value()) {
 
                 ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
-                LOG.info(message.toString());
+                LOG.info("Received clusterInfoMsg:" + message.toString());
             }
 
         } catch(Exception e) {

@@ -13,10 +13,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
@@ -48,8 +45,8 @@ public class PeerClient {
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
-    List<byte[]> rlog = new ArrayList<>();
-    int lastComittedIndex  = -1 ;
+    // List<byte[]> rlog = Collections.synchronizedList(new ArrayList<>());
+    // int lastComittedIndex  = -1 ;
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
 
@@ -85,7 +82,14 @@ public class PeerClient {
 
     }
 
+    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
 
+        return peerServer.processLogEntry(e, prevIndex, lastComittedIndex);
+
+    }
+
+
+    /*
     public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
 
 
@@ -126,7 +130,7 @@ public class PeerClient {
 
         return ret ;
     }
-
+    */
     public void sendMessage(Message m) {
 
         // message needs to be queue and sent by a writer thread
@@ -339,18 +343,42 @@ public class PeerClient {
 
         public Void call() throws Exception {
 
+            int count = 0 ;
+
             while(true) {
 
-                Thread.sleep(5000) ;
+                Thread.sleep(100) ;
 
-                logRlog();
+                if (count % 100 == 0) {
+                    peerServer.logRlog();
+                }
 
+                long timeSinceLastLeadetBeat = System.currentTimeMillis() -
+                        peerServer.getlastLeaderHeartBeatts() ;
+                if (timeSinceLastLeadetBeat > 500) {
+
+                    LOG.info("We need a leader Election. No heartBeat in ") ;
+
+
+                    // have we received a request for vote for next term
+                    // if yes continue
+
+                    // else start leader election thread
+                    // get a list of available peers
+                    // connect with hello
+                    // send request vote
+
+                }
+
+
+                count++ ;
             }
 
         }
 
     }
 
+    /*
     public void logRlog() throws Exception {
 
         StringBuilder sb = new StringBuilder("Replicated Log [") ;
@@ -377,4 +405,5 @@ public class PeerClient {
         LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
 
     }
+    */
 }

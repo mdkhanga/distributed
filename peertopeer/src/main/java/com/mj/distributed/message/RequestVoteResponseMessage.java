@@ -9,28 +9,30 @@ import java.nio.ByteBuffer;
 
 public class RequestVoteResponseMessage implements Message {
 
-    private int messageType = 1 ;
-    private String greeting = "Hello" ;
-    private String hostString ;
-    private int hostPort ;
-    private int recordsize ;
+    private static MessageType messageType = MessageType.RequestVoteResponse ;
+    private int term ;
+    private int candidateId ;
+    private boolean vote ; // true = yes
 
     private static Logger LOG  = LoggerFactory.getLogger(RequestVoteResponseMessage.class) ;
 
-    public RequestVoteResponseMessage(String host, int port) {
+    public RequestVoteResponseMessage(int term, int candidateId, boolean vote) {
 
-        this.hostString = host ;
-        this.hostPort = port ;
+        this.term = term ;
+        this.candidateId = candidateId ;
+        this.vote = vote ;
 
-          }
-
-    public String getHostString() {
-        return hostString ;
     }
 
-    public int getHostPort() {
-        return hostPort ;
+    public int getTerm() {
+        return term ;
     }
+
+    public int getCandidateId() {
+        return candidateId ;
+    }
+
+    public boolean getVote() { return vote ;}
 
 
     /**
@@ -40,24 +42,24 @@ public class RequestVoteResponseMessage implements Message {
      */
     public ByteBuffer serialize() throws Exception {
 
-        byte[] greetingBytes = greeting.getBytes("UTF-8") ;
-        byte[] hostStringBytes = hostString.getBytes("UTF-8") ;
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
-        d.writeInt(messageType);
-        d.writeInt(greetingBytes.length);
-        d.write(greetingBytes);
-        d.writeInt(hostStringBytes.length);
-        d.write(hostStringBytes);
-        d.writeInt(hostPort);
+        d.writeInt(messageType.value());
+        d.writeInt(term);
+        d.writeInt(candidateId);
+        if (vote) {
+            d.writeByte(1);
+        } else {
+            d.writeByte(0);
+        }
 
-        byte[] helloMsgArray = b.toByteArray();
+        byte[] voteResponseMsgArray = b.toByteArray();
 
-        ByteBuffer retBuffer = ByteBuffer.allocate(helloMsgArray.length+4);//
+        ByteBuffer retBuffer = ByteBuffer.allocate(voteResponseMsgArray.length+4);//
 
-        retBuffer.putInt(helloMsgArray.length);
-        retBuffer.put(helloMsgArray);
+        retBuffer.putInt(voteResponseMsgArray.length);
+        retBuffer.put(voteResponseMsgArray);
 
         retBuffer.flip() ; // make it ready for reading
 
@@ -67,30 +69,22 @@ public class RequestVoteResponseMessage implements Message {
     public static RequestVoteResponseMessage deserialize(ByteBuffer readBuffer) {
 
         int messagesize = readBuffer.getInt() ;
-        LOG.info("Received message of size " + messagesize) ;
-        int messageType = readBuffer.getInt() ;
-        if (messageType != 1) {
+        // LOG.info("Received message of size " + messagesize) ;
+        int type = readBuffer.getInt() ;
+        if (type != messageType.value()) {
 
             throw new RuntimeException("Message is not the expected type HelloMessage") ;
         }
 
-        LOG.info("Received a hello message") ;
-        int greetingSize = readBuffer.getInt() ;
-        byte[] greetingBytes = new byte[greetingSize] ;
-        readBuffer.get(greetingBytes,0,greetingSize) ;
-        LOG.info("text greeing "+new String(greetingBytes)) ;
+        int term = readBuffer.getInt() ;
+        int candidateId = readBuffer.getInt();
+        int b = readBuffer.get() ;
+        boolean vote = false ;
+        if ( b == 1) {
+            vote = true ;
+        }
 
-
-        int hostStringSize = readBuffer.getInt() ;
-        byte[] hostStringBytes = new byte[hostStringSize] ;
-        readBuffer.get(hostStringBytes,0,hostStringSize) ;
-        String hostString = new String(hostStringBytes) ;
-        LOG.info("from host "+hostString) ;
-
-        int port = readBuffer.getInt() ;
-        LOG.info("and port "+port) ;
-
-        return new RequestVoteResponseMessage(hostString,port) ;
+        return new RequestVoteResponseMessage(term, candidateId, vote) ;
     }
 
 }

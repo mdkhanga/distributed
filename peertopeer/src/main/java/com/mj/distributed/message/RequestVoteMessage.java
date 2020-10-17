@@ -1,5 +1,6 @@
 package com.mj.distributed.message;
 
+import com.mj.distributed.model.LogEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,28 +10,41 @@ import java.nio.ByteBuffer;
 
 public class RequestVoteMessage implements Message {
 
-    private int messageType = 1 ;
-    private String greeting = "Hello" ;
-    private String hostString ;
-    private int hostPort ;
-    private int recordsize ;
+    private static MessageType messageType = MessageType.RequestVote ;
+    private int term;
+    private int candidateId;
+    private String candidateHost ;
+    private int candidatePort ;
+    private LogEntry lastCommittedLogEntry ;
 
     private static Logger LOG  = LoggerFactory.getLogger(RequestVoteMessage.class) ;
 
-    public RequestVoteMessage(String host, int port) {
+    public RequestVoteMessage(int term,
+                              int id,
+                              String host,
+                              int port,
+                              LogEntry lastLogEntry) {
 
-        this.hostString = host ;
-        this.hostPort = port ;
-
-          }
-
-    public String getHostString() {
-        return hostString ;
+        this.term = term ;
+        this.candidateId = candidateId ;
+        this.candidateHost = host;
+        this.candidatePort = port;
+        this.lastCommittedLogEntry = lastLogEntry;
     }
 
-    public int getHostPort() {
-        return hostPort ;
+    public int getTerm() {
+        return term ;
     }
+
+    public int getCandidateId() {
+        return candidateId ;
+    }
+
+    public String getCandidateHost() { return candidateHost ;}
+
+    public int getCandidatePort() { return candidatePort; }
+
+    public LogEntry getCommittedLastLogEntry() { return lastCommittedLogEntry; }
 
 
     /**
@@ -40,57 +54,65 @@ public class RequestVoteMessage implements Message {
      */
     public ByteBuffer serialize() throws Exception {
 
-        byte[] greetingBytes = greeting.getBytes("UTF-8") ;
-        byte[] hostStringBytes = hostString.getBytes("UTF-8") ;
+        byte[] hostStringBytes = candidateHost.getBytes("UTF-8") ;
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(b);
-        d.writeInt(messageType);
-        d.writeInt(greetingBytes.length);
-        d.write(greetingBytes);
+        d.writeInt(messageType.value());
+        d.writeInt(term);
+        d.writeInt(candidateId);
         d.writeInt(hostStringBytes.length);
         d.write(hostStringBytes);
-        d.writeInt(hostPort);
+        d.writeInt(candidatePort);
+        byte[] logEntryBytes = lastCommittedLogEntry.toBytes() ;
+        d.writeInt(logEntryBytes.length);
+        d.write(logEntryBytes);
 
-        byte[] helloMsgArray = b.toByteArray();
+        byte[] requestVoteMsgArray = b.toByteArray();
 
-        ByteBuffer retBuffer = ByteBuffer.allocate(helloMsgArray.length+4);//
+        ByteBuffer retBuffer = ByteBuffer.allocate(requestVoteMsgArray.length+4);//
 
-        retBuffer.putInt(helloMsgArray.length);
-        retBuffer.put(helloMsgArray);
+        retBuffer.putInt(requestVoteMsgArray.length);
+        retBuffer.put(requestVoteMsgArray);
 
         retBuffer.flip() ; // make it ready for reading
 
         return retBuffer ;
     }
 
-    public static RequestVoteMessage deserialize(ByteBuffer readBuffer) {
+    public static RequestVoteMessage deserialize(ByteBuffer readBuffer) throws Exception {
 
         int messagesize = readBuffer.getInt() ;
         LOG.info("Received message of size " + messagesize) ;
-        int messageType = readBuffer.getInt() ;
-        if (messageType != 1) {
+        int type = readBuffer.getInt() ;
+        if (type != messageType.value()) {
 
-            throw new RuntimeException("Message is not the expected type HelloMessage") ;
+            throw new RuntimeException("Message is not the expected type RequestVote") ;
         }
 
-        LOG.info("Received a hello message") ;
-        int greetingSize = readBuffer.getInt() ;
-        byte[] greetingBytes = new byte[greetingSize] ;
-        readBuffer.get(greetingBytes,0,greetingSize) ;
-        LOG.info("text greeing "+new String(greetingBytes)) ;
+        int term = readBuffer.getInt() ;
+        int candidateId = readBuffer.getInt();
 
 
         int hostStringSize = readBuffer.getInt() ;
         byte[] hostStringBytes = new byte[hostStringSize] ;
         readBuffer.get(hostStringBytes,0,hostStringSize) ;
-        String hostString = new String(hostStringBytes) ;
-        LOG.info("from host "+hostString) ;
+        String hostString = new String(hostStringBytes, "UTF-8") ;
 
         int port = readBuffer.getInt() ;
-        LOG.info("and port "+port) ;
 
-        return new RequestVoteMessage(hostString,port) ;
+        int logEntrySize = readBuffer.getInt() ;
+        byte[] logEntryBytes = new byte[logEntrySize];
+        readBuffer.get(logEntryBytes, 0, logEntrySize);
+
+        LogEntry entry = LogEntry.fromBytes(logEntryBytes);
+
+        return new RequestVoteMessage(
+                term,
+                candidateId,
+                hostString,
+                port,
+                entry) ;
     }
 
 }

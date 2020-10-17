@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
 
-    private int serverId ;
+    private AtomicInteger serverId ;
     private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
     private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
@@ -48,18 +48,20 @@ public class PeerServer {
 
     public static PeerServer peerServer ;
 
-    List<byte[]> rlog = new ArrayList<>();
+    List<byte[]> rlog = Collections.synchronizedList(new ArrayList<>());
+    AtomicInteger lastComittedIndex  = new AtomicInteger(-1) ;
+
     ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
             new ConcurrentHashMap<>(); // key = index, value = queue of commit responses
-    int lastComittedIndex  = -1 ;
-    int currentTerm = 0;
+
+    AtomicInteger currentTerm = new AtomicInteger(0);
 
     Long lastLeaderHeartBeatTs = 0L ;
 
     public PeerServer(int id) {
 
-        serverId = id ;
-        bindPort = 5000+serverId ;
+        serverId = new AtomicInteger(id) ;
+        bindPort = 5000+serverId.get() ;
         if (id == 1) {
             leader = true ;
         }
@@ -115,6 +117,28 @@ public class PeerServer {
     public int getBindPort() {
         return bindPort ;
     }
+
+    public int getTerm() {
+        return currentTerm.get();
+    }
+
+    public int incrementTerm() {
+        return currentTerm.incrementAndGet();
+    }
+
+    public int getServerId() {
+        return serverId.get();
+    }
+
+    public LogEntry getLastCommittedEntry() {
+        if (lastComittedIndex.get() >= 0) {
+            return new LogEntry(lastComittedIndex.get(),rlog.get(lastComittedIndex.get()));
+        } else {
+            return new LogEntry(lastComittedIndex.get(), new byte[1]);
+        }
+    }
+
+
 
     public void accept() throws IOException {
 
@@ -284,6 +308,48 @@ public class PeerServer {
         return inBoundMessageCreator;
     }
 
+    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
+
+
+        boolean ret = true ;
+
+        if (e != null) {
+
+            // LOG.info("We have an entry") ;
+
+            int position = e.getIndex();
+            byte[] data = e.getEntry();
+
+            // LOG.info("Received log entry " + ByteBuffer.wrap(data).getInt());
+
+            int expectedNextEntry = rlog.size();
+
+            // LOG.info("prev = " + prevIndex + " expectedNext = " + expectedNextEntry) ;
+            if (prevIndex + 1 == expectedNextEntry) {
+                synchronized (rlog) {
+                    rlog.add(data);
+                    // LOG.info("added to rlog") ;
+                }
+                ret = true ;
+                if (lastComittedIndex <= expectedNextEntry) {
+                    this.lastComittedIndex.set(lastComittedIndex);
+                }
+            } else {
+                ret = false ;
+                // LOG.info("did not add to rlog return false") ;
+            }
+        } else {
+            // LOG.info("No entry") ;
+        }
+
+        if (lastComittedIndex < rlog.size()) {
+            this.lastComittedIndex.set(lastComittedIndex);
+        }
+
+        return ret ;
+    }
+
+
     public static void main(String args[]) throws Exception {
 
         if (args.length == 0 ) {
@@ -337,7 +403,7 @@ public class PeerServer {
             while(true) {
 
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(200);
 
                     channelPeerMap.forEach((k,v)->{
 
@@ -345,7 +411,7 @@ public class PeerServer {
 
                             sendAppendEntriesMessage(v);
 
-                            if (count.get() % 3 == 0) {
+                            if (count.get() % 60 == 0) {
                                 logRlog() ;
                                 sendClusterInfoMessage(v);
                             }
@@ -380,7 +446,7 @@ public class PeerServer {
         AppendEntriesMessage p = new AppendEntriesMessage(1,
                 v.getNextSeq(),
                 rlog.size()-1,
-                lastComittedIndex);
+                lastComittedIndex.get());
 
         int index = getIndexToReplicate(v) ;
 
@@ -509,13 +575,11 @@ public class PeerServer {
 
         return d.getNextIndexToReplicate(maxIndex) ;
 
-
     }
 
     public void updateIndexAckCount(int index) {
 
-
-        if (lastComittedIndex >= index) {
+        if (lastComittedIndex.get() >= index) {
             ackCountMap.remove(index);
         }
 
@@ -531,7 +595,7 @@ public class PeerServer {
 
         // if (indexQueue.size() >= members.size()/2 ) {
         if (indexQueue.size() >= channelPeerMap.size()/2 ) {
-            lastComittedIndex = index ;
+            lastComittedIndex.set(index) ;
             ackCountMap.remove(index) ;
 
         }
