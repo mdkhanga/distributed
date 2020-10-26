@@ -1,9 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
-import com.mj.distributed.message.AckMessage;
-import com.mj.distributed.message.AppendEntriesResponse;
-import com.mj.distributed.message.HelloMessage;
-import com.mj.distributed.message.MessageType;
+import com.mj.distributed.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,41 +31,49 @@ public class ServerMessageHandlerCallable implements Callable {
         // LOG.info("Received message of size " + messagesize) ;
         // LOG.info("Received message type " + messageType) ;
 
-        if (messageType == MessageType.Hello.value()) {
+        try {
 
-            LOG.info("Received a hello message") ;
-            HelloMessage message = HelloMessage.deserialize(readBuffer.rewind()) ;
-            // PeerServer.peerServer.addPeer(message.getHostString()+":"+message.getHostPort());
-            PeerData d = PeerServer.peerServer.getPeerData(socketChannel) ;
-            d.setHostString(message.getHostString());
-            d.setPort(message.getHostPort());
-            PeerServer.peerServer.addPeer(message.getHostString(), message.getHostPort());
+            if (messageType == MessageType.Hello.value()) {
 
-        } else if (messageType == MessageType.Ack.value()) {
+                LOG.info("Received a hello message");
+                HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
+                // PeerServer.peerServer.addPeer(message.getHostString()+":"+message.getHostPort());
+                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                d.setHostString(message.getHostString());
+                d.setPort(message.getHostPort());
+                PeerServer.peerServer.addPeer(message.getHostString(), message.getHostPort());
 
-            AckMessage message = AckMessage.deserialize(readBuffer.rewind());
-            PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
-           LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
-        } else if (messageType == 5) {
-            AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
-            PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
-            int index = d.getIndexAcked(message.getSeqOfMessageAcked());
-            if (index >= 0) {
-                // LOG.info("updating ack count") ;
-                PeerServer.peerServer.updateIndexAckCount(index);
+            } else if (messageType == MessageType.Ack.value()) {
+
+                AckMessage message = AckMessage.deserialize(readBuffer.rewind());
+                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
+            } else if (messageType == 5) {
+                AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
+                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                int index = d.getIndexAcked(message.getSeqOfMessageAcked());
+                if (index >= 0) {
+                    // LOG.info("updating ack count") ;
+                    PeerServer.peerServer.updateIndexAckCount(index);
+                } else {
+                    // LOG.info("Not updating ack count") ;
+                }
+
+                // LOG.info("Received an appendEntriesResponse message from " + d.getHostString() + ":" + d.getPort()
+                //
+                //+ " with seq " + message.getSeqOfMessageAcked());
+            } else if (messageType == MessageType.RequestVote.value()) {
+
+                RequestVoteMessage message = RequestVoteMessage.deserialize(readBuffer.rewind());
+
+                LOG.info("Received a request vote message from "+ message.getCandidateHost() + ":" + message.getCandidatePort());
+
             } else {
-                // LOG.info("Not updating ack count") ;
+                LOG.info("Received message of unknown type " + messageType);
             }
 
-            // LOG.info("Received an appendEntriesResponse message from " + d.getHostString() + ":" + d.getPort()
-            //
-            //+ " with seq " + message.getSeqOfMessageAcked());
-        } else if (messageType == MessageType.RequestVote.value()) {
-
-            // send the message over to the leader election module
-
-        } else {
-            LOG.info("Received message of unknown type " + messageType);
+        } catch(Exception e) {
+            LOG.error("Error deserializing message ",e);
         }
 
         return null ;

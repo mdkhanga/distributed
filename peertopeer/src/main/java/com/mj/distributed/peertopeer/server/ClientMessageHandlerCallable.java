@@ -60,6 +60,7 @@ public class ClientMessageHandlerCallable implements Callable {
 
                 ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
                 LOG.info("Received clusterInfoMsg:" + message.toString());
+                peerClient.peerServer.setClusterInfo(message.getClusterInfo());
             }
 
         } catch(Exception e) {

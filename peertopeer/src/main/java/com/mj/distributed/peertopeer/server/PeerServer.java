@@ -7,6 +7,7 @@ import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.Member;
+import com.mj.distributed.model.RaftState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,19 +22,21 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
 
     private AtomicInteger serverId ;
-    private boolean leader ;
+    // private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
     private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
 
    // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
 
-    ClusterInfo clusterInfo = new ClusterInfo();
+    private volatile ClusterInfo clusterInfo = new ClusterInfo();
 
     Integer x = 0 ;
 
@@ -58,22 +61,28 @@ public class PeerServer {
 
     Long lastLeaderHeartBeatTs = 0L ;
 
-    public PeerServer(int id) {
+    volatile boolean leaderElection = false ;
+
+    volatile RaftState raftState = RaftState.follower ;
+
+    ExecutorService peerServerExecutor = Executors.newFixedThreadPool(3) ;
+
+    public PeerServer(int id, RaftState state) {
 
         serverId = new AtomicInteger(id) ;
         bindPort = 5000+serverId.get() ;
-        if (id == 1) {
-            leader = true ;
-        }
+        // if (id == 1) {
+        //    leader = true ;
+        // }
 
-
+        raftState = state ;
     }
 
     public void start(String[] seed) throws Exception {
 
 
 
-        if (leader) {
+        if (raftState.equals(RaftState.leader)) {
 
             // initiate connect to peers
             clusterInfo.addMember(new Member(bindHost, bindPort, true));
@@ -97,13 +106,13 @@ public class PeerServer {
             }
         }
 
-        if (leader) {
+        // if (leader) {
             Thread writerThread = new Thread(new ServerWriteRunnable());
             writerThread.start();
 
             Thread clientThread = new Thread(new ClientSimulator());
             clientThread.start();
-        }
+       // }
 
         accept() ;
 
@@ -138,7 +147,21 @@ public class PeerServer {
         }
     }
 
+    public boolean isLeaderElection() {
+        return leaderElection;
+    }
 
+    public void setLeaderElection(boolean s) {
+        leaderElection = true ;
+    }
+
+    public ClusterInfo getClusterInfo() {
+            return clusterInfo ;
+    }
+
+    public void setClusterInfo(ClusterInfo c) {
+        clusterInfo = c ;
+    }
 
     public void accept() throws IOException {
 
@@ -360,6 +383,8 @@ public class PeerServer {
 
         int size = args.length   ;
 
+        RaftState state = RaftState.follower ;
+
         String[] seeds = null ;
 
         if (size > 1) {
@@ -370,13 +395,13 @@ public class PeerServer {
                 ++j ;
             }
 
-
+        } else {
+            state = RaftState.leader;
         }
 
         System.out.println("Starting server with serverId:" + serverId) ;
 
-
-        peerServer = new PeerServer(serverId) ;
+        peerServer = new PeerServer(serverId, state) ;
         peerServer.start(seeds) ;
     }
 
@@ -398,46 +423,77 @@ public class PeerServer {
 
         public void run() {
 
-            AtomicInteger count = new AtomicInteger(1) ;
+            AtomicInteger count = new AtomicInteger(1);
 
-            while(true) {
+            while (true) {
 
                 try {
                     Thread.sleep(200);
 
-                    channelPeerMap.forEach((k,v)->{
 
-                        try {
+                    if (raftState.equals(RaftState.leader)) {
 
-                            sendAppendEntriesMessage(v);
+                        channelPeerMap.forEach((k, v) -> {
 
-                            if (count.get() % 60 == 0) {
-                                logRlog() ;
-                                sendClusterInfoMessage(v);
+                            try {
+
+                                sendAppendEntriesMessage(v);
+
+                                if (count.get() % 60 == 0) {
+                                    logRlog();
+                                    sendClusterInfoMessage(v);
+                                }
+
+
+                            } catch (Exception e) {
+                                LOG.error("error", e);
                             }
 
+                        });
 
-                        } catch(Exception e) {
-                            LOG.error("error" ,e) ;
+                        synchronized (x) {
+                            x = 1;
                         }
 
-                    });
+                        selector.wakeup();
 
-                    synchronized (x) {
-                        x =1 ;
+                    }
+                     else if (raftState.equals(RaftState.candidate)) {
+
+
+                        // LOG.info("We need a leader Election. No heartBeat in ") ;
+                        if (!peerServer.isLeaderElection()) {
+                            LOG.info("Starting a leader election ") ;
+                            peerServer.setLeaderElection(true);
+
+                            LOG.info("Starting leader election");
+                            LeaderElection leaderElection = new LeaderElection(peerServer);
+                            peerServerExecutor.submit(leaderElection);
+
+                        }
+
+
+
+                } else if (raftState.equals(RaftState.follower)) {
+
+                    long timeSinceLastLeadetBeat = System.currentTimeMillis() -
+                            peerServer.getlastLeaderHeartBeatts();
+                    if (peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > 1000) {
+                        LOG.info("We need a leader Election. No heartBeat in ") ;
+                        raftState = RaftState.candidate;
                     }
 
-                    selector.wakeup() ;
-                   // logRlog() ;
-                    count.incrementAndGet() ;
+                }
 
-                } catch(Exception e) {
+                    count.incrementAndGet();
+
+                } catch (Exception e) {
                     // System.out.println(e) ;
                 }
             }
 
-        }
 
+        }
 
     }
 
@@ -547,6 +603,11 @@ public class PeerServer {
         Random r = new Random() ;
 
         public void run()  {
+
+            if (!raftState.equals(RaftState.leader)) {
+                LOG.info("Not a leader not starting client thread");
+                return ;
+            }
 
             try {
 

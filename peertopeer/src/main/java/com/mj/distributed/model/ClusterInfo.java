@@ -2,13 +2,14 @@ package com.mj.distributed.model;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 public class ClusterInfo {
 
     private Member leader ;
-    private List<Member> members = new ArrayList<Member>();
+    private List<Member> members = Collections.synchronizedList(new ArrayList<Member>());
 
     public ClusterInfo() {}
 

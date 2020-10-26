@@ -23,27 +23,31 @@ public class LeaderElection implements Runnable {
         // start election timer
         electionStartTime = System.currentTimeMillis() ;
 
+        LOG.info("Started leader election at "+ electionStartTime);
+
         // get the list of available servers
+        List<Member> members = server.getClusterInfo().getMembers() ;
 
-        List<Member> members = server.clusterInfo.getMembers() ;
+        synchronized (members) {
+            members.forEach((m) -> {
 
-        members.forEach((m)->{
+                try {
+                    LOG.info("Sending request vote message to "+m.getPort()) ;
+                    PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
+                    pc.start();
+                    RequestVoteMessage rv = new RequestVoteMessage(
+                            server.incrementTerm(),
+                            server.getServerId(),
+                            server.getBindHost(),
+                            server.getBindPort(),
+                            server.getLastCommittedEntry());
+                    pc.queueSendMessage(rv.serialize());
+                } catch (Exception e) {
+                    LOG.error("Error starting client in leader election", e);
+                }
 
-            try {
-                PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
-                pc.start();
-                RequestVoteMessage rv = new RequestVoteMessage(
-                        server.incrementTerm(),
-                        server.getServerId(),
-                        server.getBindHost(),
-                        server.getBindPort(),
-                        server.getLastCommittedEntry()) ;
-                pc.queueSendMessage(rv.serialize());
-            } catch(Exception e) {
-                LOG.error("Error starting client in leader election",e) ;
-            }
-
-        }) ;
+            });
+        }
 
 
         // start/get peerclients for each if necessary and connect
@@ -60,6 +64,8 @@ public class LeaderElection implements Runnable {
 
 
                 // exit
+
+
 
     }
 

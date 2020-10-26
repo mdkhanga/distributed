@@ -1,8 +1,10 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.HelloMessage;
+import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.message.Message;
+import com.mj.distributed.model.Member;
 import org.slf4j.LoggerFactory ;
 import org.slf4j.Logger ;
 import java.io.DataOutputStream;
@@ -39,7 +41,7 @@ public class PeerClient {
 
     Selector selector ;
 
-    ExecutorService peerClientExecutor = Executors.newFixedThreadPool(2) ;
+    ExecutorService peerClientExecutor = Executors.newFixedThreadPool(3) ;
 
     public Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
@@ -88,49 +90,6 @@ public class PeerClient {
 
     }
 
-
-    /*
-    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
-
-
-        boolean ret = true ;
-
-        if (e != null) {
-
-            // LOG.info("We have an entry") ;
-
-            int position = e.getIndex();
-            byte[] data = e.getEntry();
-
-            // LOG.info("Received log entry " + ByteBuffer.wrap(data).getInt());
-
-            int expectedNextEntry = rlog.size();
-
-            // LOG.info("prev = " + prevIndex + " expectedNext = " + expectedNextEntry) ;
-            if (prevIndex + 1 == expectedNextEntry) {
-                synchronized (rlog) {
-                    rlog.add(data);
-                    // LOG.info("added to rlog") ;
-                }
-                ret = true ;
-                if (lastComittedIndex <= expectedNextEntry) {
-                    this.lastComittedIndex = lastComittedIndex;
-                }
-            } else {
-                ret = false ;
-                // LOG.info("did not add to rlog return false") ;
-            }
-        } else {
-            // LOG.info("No entry") ;
-        }
-
-        if (lastComittedIndex < rlog.size()) {
-            this.lastComittedIndex = lastComittedIndex;
-        }
-
-        return ret ;
-    }
-    */
     public void sendMessage(Message m) {
 
         // message needs to be queue and sent by a writer thread
@@ -345,65 +304,22 @@ public class PeerClient {
 
             int count = 0 ;
 
+            boolean leaderElectionStarted = false ;
+
+            LeaderElection leaderElection = null ;
+
             while(true) {
 
-                Thread.sleep(100) ;
-
-                if (count % 100 == 0) {
-                    peerServer.logRlog();
-                }
-
-                long timeSinceLastLeadetBeat = System.currentTimeMillis() -
-                        peerServer.getlastLeaderHeartBeatts() ;
-                if (timeSinceLastLeadetBeat > 500) {
-
-                    LOG.info("We need a leader Election. No heartBeat in ") ;
+                Thread.sleep(10000);
 
 
-                    // have we received a request for vote for next term
-                    // if yes continue
-
-                    // else start leader election thread
-                    // get a list of available peers
-                    // connect with hello
-                    // send request vote
-
-                }
+                peerServer.logRlog();
 
 
-                count++ ;
             }
-
         }
 
     }
 
-    /*
-    public void logRlog() throws Exception {
 
-        StringBuilder sb = new StringBuilder("Replicated Log [") ;
-
-
-
-        rlog.forEach((k)->{
-
-            try {
-
-                sb.append(ByteBuffer.wrap(k).getInt()) ;
-                sb.append(",") ;
-
-
-            } catch(Exception e) {
-                LOG.error("Error getting remote address ",e) ;
-            }
-
-        });
-
-        sb.append("]") ;
-
-        LOG.info(sb.toString()) ;
-        LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
-
-    }
-    */
 }
