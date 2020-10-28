@@ -163,6 +163,14 @@ public class PeerServer {
         clusterInfo = c ;
     }
 
+    public void queueSendMessage(SocketChannel c, Message m) throws Exception {
+
+        PeerData d = channelPeerMap.get(c);
+        d.addMessageForPeer(m);
+        selector.wakeup() ;
+
+    }
+
     public void accept() throws IOException {
 
 
@@ -203,7 +211,9 @@ public class PeerServer {
                     }
                 }
 
+
                 selector.select();
+                // LOG.info("after select") ;
 
                 Iterator<SelectionKey> keysIterator = selector.selectedKeys().iterator();
 
@@ -215,16 +225,19 @@ public class PeerServer {
 
                     if (key.isAcceptable()) {
 
+                        // LOG.info("Something to accept");
                         accept(key) ;
 
 
                     } else if (key.isReadable()) {
 
+                        // LOG.info("Something to read") ;
                         read(key) ;
 
 
                     } else if (key.isWritable()) {
 
+                        // LOG.info("Something to write") ;
                         write(key) ;
 
 
@@ -237,7 +250,7 @@ public class PeerServer {
             }
 
         } catch(IOException e) {
-            LOG.error("Exception :",e) ;
+             LOG.error("Exception :",e) ;
         }
 
     }
@@ -250,10 +263,10 @@ public class PeerServer {
 
         InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
 
-        LOG.info("accepted connection from " + socketAddress.getHostString());
+        LOG.info("accepted connection from " + socketAddress.getHostString() +":" + socketAddress.getPort());
         channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
 
-
+        sc.register(this.selector, SelectionKey.OP_READ);
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -320,7 +333,7 @@ public class PeerServer {
         int n = sc.write(towrite);
         while (n > 0 && towrite.remaining() > 0) {
             n = sc.write(towrite);
-            LOG.info("Server wrote bytes "+n) ;
+           // LOG.info("Server wrote bytes "+n) ;
         }
 
         key.interestOps(SelectionKey.OP_READ);

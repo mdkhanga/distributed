@@ -32,7 +32,23 @@ public class LeaderElection implements Runnable {
             members.forEach((m) -> {
 
                 try {
-                    LOG.info("Sending request vote message to "+m.getPort()) ;
+
+
+                    if (m.isLeader()) {
+                        LOG.info("skipping "+m.getHostString() + ":" + m.getPort()) ;
+                        return ;
+                    }
+
+                    if (m.getHostString().equals(server.getBindHost()) && m.getPort() == server.getBindPort()) {
+                        LOG.info("skipping self") ;
+                        return ;
+                    }
+
+                    if (m.getPort() == 5002) {
+                        return ;
+                    }
+
+                    LOG.info("Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
                     PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
                     pc.start();
                     RequestVoteMessage rv = new RequestVoteMessage(

@@ -61,6 +61,18 @@ public class ClientMessageHandlerCallable implements Callable {
                 ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
                 LOG.info("Received clusterInfoMsg:" + message.toString());
                 peerClient.peerServer.setClusterInfo(message.getClusterInfo());
+            } else if (messageType == MessageType.RequestVoteResponse.value()) {
+
+                LOG.info("Received RequestVoteResponse Message") ;
+                RequestVoteResponseMessage message = RequestVoteResponseMessage.deserialize(readBuffer.rewind());
+
+                if (message.getVote()) {
+                    LOG.info("Got vote. Won the election") ;
+                } else {
+                    LOG.info("Did not get vote. Lost the election");
+                }
+
+
             }
 
         } catch(Exception e) {

@@ -43,7 +43,7 @@ public class PeerClient {
 
     ExecutorService peerClientExecutor = Executors.newFixedThreadPool(3) ;
 
-    public Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
+    public volatile Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
@@ -144,6 +144,8 @@ public class PeerClient {
         @Override
         public Void call() throws Exception {
 
+            try {
+
             /* selector = Selector.open() ;
 
             clientChannel = SocketChannel.open();
@@ -153,12 +155,12 @@ public class PeerClient {
 
             clientChannel.register(selector, SelectionKey.OP_CONNECT) ; */
 
-            int i = 0 ;
+                int i = 0;
 
-            // HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
-            // writeQueue.add(m.serialize());
+                // HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort()) ;
+                // writeQueue.add(m.serialize());
 
-            while(true) {
+                while (true) {
 
                /* if (clientChannel.isConnected()) {
                     LOG.info("Connected") ;
@@ -173,51 +175,55 @@ public class PeerClient {
                 } */
 
 
-
-                if (clientChannel.isConnected() && writeQueue.peek() != null) {
-                    clientChannel.register(selector, SelectionKey.OP_WRITE);
-                    // LOG.info("Connected and soemthing to write");
-                } else {
-                   // LOG.info("Connected and nothing to write");
-                }
-
-               // LOG.info("before select");
-                selector.select(3000) ;
-               // LOG.info("after select");
-
-                Iterator<SelectionKey> skeys = selector.selectedKeys().iterator() ;
-
-                while (skeys.hasNext()) {
-                    SelectionKey key = (SelectionKey) skeys.next();
-                    skeys.remove();
-
-                    if (!key.isValid()) {
-                        LOG.info("key is not valid") ;
-                        continue;
-                    }
-
-                    // System.out.println("We have a valid key") ;
-                    // Check what event is available and deal with it
-                    if (key.isConnectable()) {
-                        // LOG.info("trying to conect") ;
-                        finishConnection(key);
-                    } else if (key.isReadable()) {
-                        // LOG.info("trying to read") ;
-                        read(key);
-                        // done = true ;
-                    } else if (key.isWritable()) {
-                       // LOG.info("trying to write") ;
-                        write(key);
+                    if (clientChannel.isConnected() && writeQueue.peek() != null) {
+                        clientChannel.register(selector, SelectionKey.OP_WRITE);
+                        // LOG.info("Connected and soemthing to write");
                     } else {
-                        System.out.println("not handled key") ;
-
+                        // LOG.info("Connected and nothing to write");
                     }
+
+                    // LOG.info("before select");
+                    selector.select(3000);
+                    // LOG.info("after select");
+
+                    Iterator<SelectionKey> skeys = selector.selectedKeys().iterator();
+
+                    while (skeys.hasNext()) {
+                        SelectionKey key = (SelectionKey) skeys.next();
+                        skeys.remove();
+
+                        if (!key.isValid()) {
+                            LOG.info("key is not valid");
+                            continue;
+                        }
+
+                        // System.out.println("We have a valid key") ;
+                        // Check what event is available and deal with it
+                        if (key.isConnectable()) {
+                            // LOG.info("trying to conect") ;
+                            finishConnection(key);
+                        } else if (key.isReadable()) {
+                            // LOG.info("trying to read") ;
+                            read(key);
+                            // done = true ;
+                        } else if (key.isWritable()) {
+                            // LOG.info("trying to write") ;
+                            write(key);
+                        } else {
+                            System.out.println("not handled key");
+
+                        }
+                    }
+
+                    ++i;
+
                 }
 
-                ++i ;
-
+            } catch(Exception e) {
+                LOG.error("Error in peerclient",e);
             }
 
+            return null ;
         }
 
         private void finishConnection(SelectionKey key) throws IOException {
@@ -234,7 +240,7 @@ public class PeerClient {
             b = writeQueue.poll() ;
 
             if (b != null) {
-                // LOG.info("we got b to write") ;
+               // LOG.info("we got b to write") ;
             } else {
 
                // LOG.info("b is null could not get b to write") ;
@@ -242,13 +248,15 @@ public class PeerClient {
             }
 
             int n = clientChannel.write(b) ;
-            // LOG.info("Wrote bytes " + n) ;
+           // LOG.info("Wrote bytes " + n) ;
             int totalbyteswritten = n ;
             while (n > 0 && b.remaining() > 0) {
                 n = clientChannel.write(b) ;
+             //   LOG.info("Wrote bytes " + n) ;
                 totalbyteswritten = totalbyteswritten + n ;
 
             }
+
 
            // LOG.info("Wrote bytes " + totalbyteswritten) ;
 
