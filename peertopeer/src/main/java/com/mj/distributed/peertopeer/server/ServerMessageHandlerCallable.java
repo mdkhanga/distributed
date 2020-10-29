@@ -68,12 +68,13 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Received a request vote message from "+ message.getCandidateHost() + ":" + message.getCandidatePort());
 
-                /* RequestVoteResponseMessage requestVoteResponseMessage = new RequestVoteResponseMessage(
+                RequestVoteResponseMessage requestVoteResponseMessage = new RequestVoteResponseMessage(
                         message.getTerm(),
                         message.getCandidateId(),
                         true);
 
-                PeerServer.peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage); */
+                LOG.info("Queueing response");
+                PeerServer.peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage);
 
             } else {
                 LOG.info("Received message of unknown type " + messageType);

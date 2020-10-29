@@ -73,7 +73,7 @@ public class RequestVoteResponseMessage implements Message {
         int type = readBuffer.getInt() ;
         if (type != messageType.value()) {
 
-            throw new RuntimeException("Message is not the expected type HelloMessage") ;
+            throw new RuntimeException("Message is not the expected type ReequestVoteResponseMessage") ;
         }
 
         int term = readBuffer.getInt() ;

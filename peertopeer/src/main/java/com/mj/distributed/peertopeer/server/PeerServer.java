@@ -31,7 +31,7 @@ public class PeerServer {
     private AtomicInteger serverId ;
     // private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
-    private ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
+    private volatile ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
 
    // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
@@ -167,6 +167,11 @@ public class PeerServer {
 
         PeerData d = channelPeerMap.get(c);
         d.addMessageForPeer(m);
+
+        synchronized(x) {
+            x = 1 ;
+        }
+
         selector.wakeup() ;
 
     }
@@ -192,24 +197,24 @@ public class PeerServer {
 
             while (true) {
 
-                if (x == 1) {
-                    channelPeerMap.forEach((k, v) -> {
+               if (x == 1) {
+                   channelPeerMap.forEach((k, v) -> {
 
-                        try {
-                            if (v.peekWriteBuffer() != null) {
-                                k.register(selector, SelectionKey.OP_WRITE);
-                            }
-                            // selector.wakeup();
-                        } catch (Exception e) {
-                            LOG.error("error", e);
-                        }
+                       try {
+                           if (v.peekWriteBuffer() != null) {
+                               k.register(selector, SelectionKey.OP_WRITE);
+                           }
+                           // selector.wakeup();
+                       } catch (Exception e) {
+                           LOG.error("error", e);
+                       }
 
-                    });
+                   });
 
-                    synchronized (x) {
-                        x = 0;
-                    }
-                }
+                   synchronized (x) {
+                       x = 0;
+                   }
+               }
 
 
                 selector.select();

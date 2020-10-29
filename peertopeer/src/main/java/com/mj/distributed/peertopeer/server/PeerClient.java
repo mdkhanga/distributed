@@ -183,7 +183,7 @@ public class PeerClient {
                     }
 
                     // LOG.info("before select");
-                    selector.select(3000);
+                    selector.select();
                     // LOG.info("after select");
 
                     Iterator<SelectionKey> skeys = selector.selectedKeys().iterator();
