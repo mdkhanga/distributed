@@ -478,7 +478,7 @@ public class PeerServer {
                     }
                      else if (raftState.equals(RaftState.candidate)) {
 
-
+                        // test
                         // LOG.info("We need a leader Election. No heartBeat in ") ;
                         if (!peerServer.isLeaderElection()) {
                             LOG.info("Starting a leader election ") ;
