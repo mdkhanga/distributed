@@ -20,10 +20,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerServer {
@@ -32,6 +29,8 @@ public class PeerServer {
     // private boolean leader ;
     private Set<PeerClient> peerSet = new HashSet<PeerClient>();
     private volatile ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
+
+    private final ConcurrentMap<Member, Peer> connectedMembersMap = new ConcurrentHashMap<>() ;
 
 
    // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;

@@ -1,6 +1,7 @@
 package com.mj.distributed.model;
 
 import java.io.*;
+import java.util.Objects;
 
 public class Member {
 
@@ -69,5 +70,26 @@ public class Member {
         b.append("]");
         return b.toString();
 
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+
+        if (obj == this) return true ;
+
+        if (! (obj instanceof Member)) {
+            return false ;
+        }
+        Member m = (Member) obj ;
+
+        return hostString.equals(m.hostString) &&
+                port == m.port &&
+                leader == m.leader ;
+
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hostString, port, leader);
     }
 }
