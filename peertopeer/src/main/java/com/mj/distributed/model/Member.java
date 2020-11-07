@@ -16,6 +16,12 @@ public class Member {
         this.leader = leader ;
     }
 
+    public Member( String h, int p) {
+
+        this.hostString = h ;
+        this.port = p ;
+    }
+
     public String getHostString() {
         return hostString;
     }
@@ -83,13 +89,12 @@ public class Member {
         Member m = (Member) obj ;
 
         return hostString.equals(m.hostString) &&
-                port == m.port &&
-                leader == m.leader ;
+                port == m.port ;
 
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(hostString, port, leader);
+        return Objects.hash(hostString, port);
     }
 }

@@ -26,12 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PeerServer {
 
     private AtomicInteger serverId ;
-    // private boolean leader ;
-    private Set<PeerClient> peerSet = new HashSet<PeerClient>();
-    private volatile ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
+
+
+    // private volatile ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
 
     private final ConcurrentMap<Member, Peer> connectedMembersMap = new ConcurrentHashMap<>() ;
-
+    private volatile ConcurrentMap<Member, PeerData> memberPeerDataMap = new ConcurrentHashMap<>() ;
+    // reverse index
+    private final ConcurrentMap<SocketChannel, Peer> socketChannelPeerMap = new ConcurrentHashMap<>() ;
 
    // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
 
@@ -51,9 +53,9 @@ public class PeerServer {
     public static PeerServer peerServer ;
 
     List<byte[]> rlog = Collections.synchronizedList(new ArrayList<>());
-    AtomicInteger lastComittedIndex  = new AtomicInteger(-1) ;
+    volatile AtomicInteger lastComittedIndex  = new AtomicInteger(-1) ;
 
-    ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
+    volatile ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
             new ConcurrentHashMap<>(); // key = index, value = queue of commit responses
 
     AtomicInteger currentTerm = new AtomicInteger(0);
@@ -164,8 +166,15 @@ public class PeerServer {
 
     public void queueSendMessage(SocketChannel c, Message m) throws Exception {
 
-        PeerData d = channelPeerMap.get(c);
+        /* PeerData d = channelPeerMap.get(c);
         d.addMessageForPeer(m);
+
+        */
+
+        Peer p = socketChannelPeerMap.get(c) ;
+
+
+        p.queueSendMessage(m);
 
         synchronized(x) {
             x = 1 ;
@@ -196,8 +205,15 @@ public class PeerServer {
 
             while (true) {
 
-               if (x == 1) {
-                   channelPeerMap.forEach((k, v) -> {
+                int y ;
+            synchronized (x) {
+                y = x ;
+            }
+
+                if (y == 1) {
+
+
+                   /* channelPeerMap.forEach((k, v) -> {
 
                        try {
                            if (v.peekWriteBuffer() != null) {
@@ -208,7 +224,31 @@ public class PeerServer {
                            LOG.error("error", e);
                        }
 
-                   });
+                   }); */
+
+                   connectedMembersMap.forEach((k,v) -> {
+
+                       if (!(v instanceof ListenerPeer)) {
+                           // from here (Listener) we can only send messages to CallerPeers
+                           return ;
+                       }
+
+                       ListenerPeer listenerPeer = (ListenerPeer) v ;
+
+                       try {
+                           if (listenerPeer.peekMessageQueue() != null) {
+                               SocketChannel s = listenerPeer.socketChannel() ;
+                               s.register(selector, SelectionKey.OP_WRITE);
+                           }
+                           // selector.wakeup();
+                       } catch (Exception e) {
+                           LOG.error("error", e);
+                       }
+
+
+                   }) ;
+
+
 
                    synchronized (x) {
                        x = 0;
@@ -268,7 +308,9 @@ public class PeerServer {
         InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
 
         LOG.info("accepted connection from " + socketAddress.getHostString() +":" + socketAddress.getPort());
-        channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
+
+        // delay this to after we get hello
+        //channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
 
         sc.register(this.selector, SelectionKey.OP_READ);
     }
@@ -305,12 +347,12 @@ public class PeerServer {
             sc.close() ;
             key.cancel() ;
 
-            PeerData p = channelPeerMap.get(sc) ;
+            /* PeerData p = channelPeerMap.get(sc) ;
 
             LOG.info(p.getHostString() +":" +p.getPort() + " has left the cluster") ;
             channelPeerMap.remove(sc) ;
-            removePeer(p.getHostString(), p.getPort());
-            // members.remove(p.getHostString()+":"+p.getPort()) ;
+            removePeer(p.getHostString(), p.getPort()); */
+            removePeer(sc);
         }
 
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
@@ -325,7 +367,8 @@ public class PeerServer {
 
         SocketChannel sc = (SocketChannel) key.channel();
 
-        ByteBuffer towrite = channelPeerMap.get(sc).getNextWriteBuffer() ;
+        // ByteBuffer towrite = channelPeerMap.get(sc).getNextWriteBuffer() ;
+        ByteBuffer towrite = socketChannelPeerMap.get(sc).getNextQueuedMessage() ;
 
         if (towrite == null) {
             LOG.warn("Write queue is emptyy") ;
@@ -446,11 +489,13 @@ public class PeerServer {
 
                 try {
                     Thread.sleep(200);
+                    // Thread.sleep(1000);
 
 
                     if (raftState.equals(RaftState.leader)) {
 
-                        channelPeerMap.forEach((k, v) -> {
+                        // channelPeerMap.forEach((k, v) -> {
+                        connectedMembersMap.forEach((k, v) -> {
 
                             try {
 
@@ -493,6 +538,7 @@ public class PeerServer {
 
                 } else if (raftState.equals(RaftState.follower)) {
 
+
                     long timeSinceLastLeadetBeat = System.currentTimeMillis() -
                             peerServer.getlastLeaderHeartBeatts();
                     if (peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > 1000) {
@@ -514,7 +560,11 @@ public class PeerServer {
 
     }
 
-    public void sendAppendEntriesMessage(PeerData v) throws Exception {
+    // public void sendAppendEntriesMessage(PeerData v) throws Exception {
+    public void sendAppendEntriesMessage(Peer peer) throws Exception {
+
+        Member m = peer.member();
+        PeerData v = memberPeerDataMap.get(m);
 
         AppendEntriesMessage p = new AppendEntriesMessage(1,
                 v.getNextSeq(),
@@ -527,34 +577,69 @@ public class PeerServer {
 
         if (index >= 0 && index < rlog.size()) {
             byte[] data = rlog.get(index);
-           // LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
+            // LOG.info("Replicating ..." + ByteBuffer.wrap(data).getInt());
             LogEntry entry = new LogEntry(index, data);
             p.addLogEntry(entry);
             p.setPrevIndex(index-1);
         }
 
-        v.addMessageForPeer(p);
+        // v.addMessageForPeer(p);
+
+        v.addToSeqIdIndexMap(p);
+
+
+        peer.queueSendMessage(p);
         ackCountMap.put(index, new ConcurrentLinkedQueue<Integer>());
 
     }
 
-    public void sendClusterInfoMessage(PeerData v) throws Exception {
+    // public void sendClusterInfoMessage(PeerData v) throws Exception {
+    public void sendClusterInfoMessage(Peer peer) throws Exception {
         ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
-        v.addMessageForPeer(cm);
+        // v.addMessageForPeer(cm);
+        peer.queueSendMessage(cm);
 
     }
 
 
      public void removePeer(String hostString, int port) {
        clusterInfo.removeMember(hostString, port);
+       connectedMembersMap.remove(new Member(hostString, port));
     }
 
-    public void addPeer(String hostString, int port) {
-        clusterInfo.addMember(new Member(hostString, port, false));
+    public void removePeer(SocketChannel sc) {
+
+        Peer p = socketChannelPeerMap.get(sc) ;
+
+        Member m = null ;
+
+        if (p != null) {
+            m = p.member() ;
+        }
+
+        socketChannelPeerMap.remove(sc) ;
+        connectedMembersMap.remove(m);
+        memberPeerDataMap.remove(m);
+        clusterInfo.removeMember(m.getHostString(), m.getPort());
+
+    }
+
+    public void addPeer(SocketChannel sc, String hostString, int port) {
+        Member m = new Member(hostString, port, false);
+        ListenerPeer l = new ListenerPeer(m, sc) ;
+        clusterInfo.addMember(m);
+        connectedMembersMap.put(m, l) ;
+        memberPeerDataMap.put(m, new PeerData(hostString, port));
+        socketChannelPeerMap.put(sc, l);
+    }
+
+    public Peer getPeer(SocketChannel s) {
+        return socketChannelPeerMap.get(s) ;
     }
 
     public PeerData getPeerData(SocketChannel s) {
-        return channelPeerMap.get(s) ;
+        Peer p = getPeer(s) ;
+        return memberPeerDataMap.get(p.member());
     }
 
     /* public void logCluster() throws Exception {
@@ -672,10 +757,12 @@ public class PeerServer {
         // LOG.info("Incrementing index q") ;
 
         // if (indexQueue.size() >= members.size()/2 ) {
-        if (indexQueue.size() >= channelPeerMap.size()/2 ) {
+        if (indexQueue.size() >= connectedMembersMap.size()/2 ) {
             lastComittedIndex.set(index) ;
             ackCountMap.remove(index) ;
-
+            // LOG.info("Got enough votes " + indexQueue.size() + "---" + connectedMembersMap.size()/2 );
+        } else {
+           //  LOG.info("Not enough votes " + indexQueue.size() + "---" + connectedMembersMap.size()/2 );
         }
     }
 }

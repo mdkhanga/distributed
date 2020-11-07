@@ -3,6 +3,8 @@ package com.mj.distributed.peertopeer.server;
 import com.mj.distributed.message.AppendEntriesMessage;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.model.LogEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Queue;
@@ -16,11 +18,12 @@ public class PeerData {
     private int port ;
     private int serverId ;
     private int lastSeqAcked ;
-    private AtomicInteger seq = new AtomicInteger(0) ;
-    private ConcurrentHashMap<Integer, Integer> seqIdLogIndexMap = new ConcurrentHashMap() ;
-    private int lastIndexReplicated = -1;
-    private int lastIndexCommitted = -1;
+    private volatile AtomicInteger seq = new AtomicInteger(0) ;
+    private volatile ConcurrentHashMap<Integer, Integer> seqIdLogIndexMap = new ConcurrentHashMap() ;
+    private volatile int lastIndexReplicated = -1;
+    private volatile int lastIndexCommitted = -1;
 
+    private Logger LOG  = LoggerFactory.getLogger(PeerData.class);
 
     Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<>() ;
 
@@ -63,11 +66,23 @@ public class PeerData {
             LogEntry e = amsg.getLogEntry();
 
             if (e != null) {
+               // LOG.info("Putting inseq id Map") ;
                 seqIdLogIndexMap.put(amsg.getSeqId(), e.getIndex());
             }
         }
         ByteBuffer b = msg.serialize() ;
         addWriteBuffer(b);
+    }
+
+    public void addToSeqIdIndexMap(AppendEntriesMessage amsg) {
+
+        LogEntry e = amsg.getLogEntry();
+
+        if (e != null) {
+            // LOG.info("Putting inseq id Map") ;
+            seqIdLogIndexMap.put(amsg.getSeqId(), e.getIndex());
+        }
+
     }
 
     public String getHostString() {
@@ -104,10 +119,13 @@ public class PeerData {
 
     public int getNextIndexToReplicate(int maxIndex) {
 
+        // LOG.info("max index is "+ maxIndex);
+
         int ret = lastIndexReplicated + 1 ;
 
         if (ret <= maxIndex) {
             ++lastIndexReplicated;
+           // LOG.info("next index is "+ ret) ;
             return ret ;
         }
 

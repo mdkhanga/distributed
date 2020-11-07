@@ -20,8 +20,9 @@ public class ListenerPeer implements Peer {
         socketChannel = sc ;
     }
 
-    public void queueSendMessage(Message m) {
+    public void queueSendMessage(Message m) throws Exception {
 
+        writeQueue.add(m.serialize()) ;
     }
 
     public void onReceiveMessage(Message m) {
@@ -41,5 +42,17 @@ public class ListenerPeer implements Peer {
     public void shutdown() {
 
 
+    }
+
+    public SocketChannel socketChannel() {
+        return socketChannel ;
+    }
+
+    public ByteBuffer peekMessageQueue() {
+        return writeQueue.peek() ;
+    }
+
+    public ByteBuffer getNextQueuedMessage() {
+        return writeQueue.poll() ;
     }
 }

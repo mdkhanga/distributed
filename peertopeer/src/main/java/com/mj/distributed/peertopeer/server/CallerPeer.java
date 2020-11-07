@@ -3,6 +3,8 @@ package com.mj.distributed.peertopeer.server;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.model.Member;
 
+import java.nio.ByteBuffer;
+
 public class CallerPeer {
 
     private final Member member ; // member that we are connected to
@@ -35,5 +37,13 @@ public class CallerPeer {
     public void shutdown() {
 
 
+    }
+
+    public ByteBuffer peekMessageQueue() {
+        return null;
+    }
+
+    public ByteBuffer getNextQueuedMessage() {
+        return null ;
     }
 }

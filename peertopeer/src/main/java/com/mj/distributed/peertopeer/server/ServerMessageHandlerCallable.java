@@ -37,23 +37,25 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Received a hello message");
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
-                // PeerServer.peerServer.addPeer(message.getHostString()+":"+message.getHostPort());
-                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                /* PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
                 d.setHostString(message.getHostString());
-                d.setPort(message.getHostPort());
-                PeerServer.peerServer.addPeer(message.getHostString(), message.getHostPort());
+                d.setPort(message.getHostPort()); */
+                PeerServer.peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
 
             } else if (messageType == MessageType.Ack.value()) {
 
                 AckMessage message = AckMessage.deserialize(readBuffer.rewind());
-                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
-                LOG.info("Received ack message from " + d.getHostString() + ":" + d.getPort() + " with seq " + message.getSeqOfMessageAcked());
+                Peer d = PeerServer.peerServer.getPeer(socketChannel);
+                LOG.info("Received ack message from " + d.member().getHostString() + ":" + d.member().getPort() + " with seq " + message.getSeqOfMessageAcked());
             } else if (messageType == 5) {
                 AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
                 PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
                 int index = d.getIndexAcked(message.getSeqOfMessageAcked());
+                // LOG.info("Got AppendEntries response") ;
+
+
                 if (index >= 0) {
-                    // LOG.info("updating ack count") ;
+                   // LOG.info("got index for seqId " + message.getSeqOfMessageAcked()) ;
                     PeerServer.peerServer.updateIndexAckCount(index);
                 } else {
                     // LOG.info("Not updating ack count") ;
