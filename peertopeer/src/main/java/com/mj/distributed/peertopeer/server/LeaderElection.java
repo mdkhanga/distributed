@@ -1,5 +1,6 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.message.RequestVoteMessage;
 import com.mj.distributed.message.RequestVoteResponseMessage;
 import com.mj.distributed.model.Member;
@@ -51,6 +52,10 @@ public class LeaderElection implements Runnable {
                     LOG.info("Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
                     PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
                     pc.start();
+
+                    HelloMessage hm = new HelloMessage(server.getBindHost(), server.getBindPort());
+                    pc.queueSendMessage(hm.serialize());
+
                     RequestVoteMessage rv = new RequestVoteMessage(
                             server.incrementTerm(),
                             server.getServerId(),
