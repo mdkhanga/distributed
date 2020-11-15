@@ -7,6 +7,7 @@ import com.mj.distributed.model.Member;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class LeaderElection implements Runnable {

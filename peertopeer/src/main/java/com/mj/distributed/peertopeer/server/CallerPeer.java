@@ -16,8 +16,8 @@ public class CallerPeer {
         peerClient = p;
     }
 
-    public void queueSendMessage(Message m) {
-
+    public void queueSendMessage(Message m) throws Exception{
+        peerClient.queueSendMessage(m.serialize());
     }
 
     public void onReceiveMessage(Message m) {

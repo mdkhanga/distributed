@@ -1,6 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.message.*;
+import com.mj.distributed.model.LogEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,9 @@ public class ServerMessageHandlerCallable implements Callable {
 
     public Void call() {
 
+        // WARNING : 11142020
+        // MIGHT BREAK CODE
+        // commented read because rewind in InBoundMessage Creator was commented
         int messagesize = readBuffer.getInt() ;
         int messageType = readBuffer.getInt() ;
 
@@ -78,7 +82,34 @@ public class ServerMessageHandlerCallable implements Callable {
                 LOG.info("Queueing response");
                 PeerServer.peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage);
 
-            } else {
+            } else if (messageType == MessageType.AppendEntries.value()) {
+                AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
+                PeerServer.peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());
+                boolean entryResult = true ;
+                LogEntry e = message.getLogEntry() ;
+                entryResult = PeerServer.peerServer.processLogEntry(e,message.getPrevIndex(),message.getLeaderCommitIndex()) ;
+                AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, entryResult);
+                ByteBuffer b = resp.serialize();
+                PeerServer.peerServer.queueSendMessage(socketChannel, resp);
+            }  else if (messageType == MessageType.ClusterInfo.value()) {
+
+                ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
+                LOG.info("Received clusterInfoMsg:" + message.toString());
+                PeerServer.peerServer.setClusterInfo(message.getClusterInfo());
+            } else if (messageType == MessageType.RequestVoteResponse.value()) {
+
+                LOG.info("Received RequestVoteResponse Message") ;
+                RequestVoteResponseMessage message = RequestVoteResponseMessage.deserialize(readBuffer.rewind());
+
+                if (message.getVote()) {
+                    LOG.info("Got vote. Won the election") ;
+                } else {
+                    LOG.info("Did not get vote. Lost the election");
+                }
+
+
+            }
+            else {
                 LOG.info("Received message of unknown type " + messageType);
             }
 

@@ -30,13 +30,13 @@ public class InBoundMessageCreator {
 
     }
 
-    public void submit(SocketChannel s, ByteBuffer b, int bytesinbuffer,Callable c) {
+    public void submit(SocketChannel s, ByteBuffer b, int bytesinbuffer) {
 
         // make a copy of the ByteBuffer
         ByteBuffer newBuffer = ByteBuffer.allocate(bytesinbuffer);
         System.arraycopy(b.array(),0,newBuffer.array(),0,bytesinbuffer);
 
-        inBoundMessageParser.submit(new InBoundMessageReader(s,newBuffer,bytesinbuffer,c)) ;
+        inBoundMessageParser.submit(new InBoundMessageReader(s,newBuffer,bytesinbuffer)) ;
     }
 
     public class InBoundMessageReader implements Callable {
@@ -44,14 +44,14 @@ public class InBoundMessageCreator {
         SocketChannel socketChannel ;
         ByteBuffer readBuffer ;
         int numbytes ;
-        Callable handler ;
+        // Callable handler ;
 
-        public InBoundMessageReader(SocketChannel s, ByteBuffer b,int numbyt,Callable c) {
+        public InBoundMessageReader(SocketChannel s, ByteBuffer b,int numbyt) {
 
             socketChannel = s ;
             readBuffer = b ;
             numbytes = numbyt ;
-            handler = c ;
+            // handler = c ;
 
         }
 
@@ -60,35 +60,63 @@ public class InBoundMessageCreator {
             boolean prevreadpartial = false ;
             int messagesize ;
 
+            // LOG.info("numBytes = " + numbytes);
 
             if (!prevreadpartial) {
-                messagesize = readBuffer.getInt();
 
-               // LOG.info("messagesize = "+ messagesize) ;
-                // LOG.info("numBytes = " + numbytes) ;
+                /* messagesize = readBuffer.getInt();
 
-                int messageBytesRead = numbytes -4 ;
+               LOG.info("messagesize = "+ messagesize) ;
+               LOG.info("numBytes = " + numbytes) ;
+
+                int messageBytesToRead = numbytes -4 ; */
 
                 // LOG.info("messageBytesRead = " + messageBytesRead) ;
 
+                int srcPos = 0;
+                while (numbytes > 0) {
 
-                if (messagesize == messageBytesRead) {
+                    // LOG.info("numBytes = " + numbytes) ;
+                    readBuffer.position(srcPos) ;
+                    // LOG.info("readBuffer pos" + readBuffer.position());
+                    messagesize = readBuffer.getInt();
+
+                    // LOG.info("messagesize = "+ messagesize) ;
+
+
+                    numbytes = numbytes -4 ;
+
+                    // FIXME: additional copy
+                    ByteBuffer newBuffer = ByteBuffer.allocate(messagesize+4);
+                    // System.arraycopy(readBuffer.array(),srcPos ,newBuffer.array(),0,messagesize+4);
+                    // LOG.info("src Pos = " + srcPos) ;
+                    newBuffer.put(readBuffer.array(), srcPos, messagesize+4 );
+
+                    inBoundMessageHandler.submit(new ServerMessageHandlerCallable(socketChannel,
+                            newBuffer.rewind()));
+
+                    numbytes = numbytes - messagesize ;
+                    srcPos = srcPos + messagesize + 4;
+                }
+
+
+                 /* if (messagesize == messageBytesToRead) {
 
                     // We have the full message
 
-                    readBuffer.rewind();
+                     // WARNING: commenting the line below might break cde
+                    // readBuffer.rewind();
                     inBoundMessageHandler.submit(handler);
-                } else if (messageBytesRead < messagesize) {
-                    LOG.info("Did not receive full message received:" + messageBytesRead + " expected: "+messagesize);
-                } else {
+                 } else if (messageBytesToRead < messagesize) {
+                    LOG.info("Did not receive full message received:" + messageBytesToRead + " expected: "+messagesize);
+                 } else {
 
                     LOG.info("more than 1 message " + numbytes);
-                }
+                 } */
             } else {
 
                 // start reading and adding to partial message from last read
                 LOG.info("Seems like a partial message") ;
-
 
             }
 

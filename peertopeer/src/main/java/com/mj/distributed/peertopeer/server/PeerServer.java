@@ -358,8 +358,10 @@ public class PeerServer {
         // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
         readBuffer.rewind() ;
 
-        inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,
-                readBuffer));
+        /*  inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,
+                readBuffer)); */
+
+        inBoundMessageCreator.submit(sc,readBuffer,totalread);
 
     }
 
@@ -555,7 +557,6 @@ public class PeerServer {
                 }
             }
 
-
         }
 
     }
@@ -631,6 +632,7 @@ public class PeerServer {
         connectedMembersMap.put(m, l) ;
         memberPeerDataMap.put(m, new PeerData(hostString, port));
         socketChannelPeerMap.put(sc, l);
+
     }
 
     public Peer getPeer(SocketChannel s) {

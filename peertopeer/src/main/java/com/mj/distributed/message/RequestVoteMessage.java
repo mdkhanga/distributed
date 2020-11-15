@@ -74,6 +74,8 @@ public class RequestVoteMessage implements Message {
 
         retBuffer.putInt(requestVoteMsgArray.length);
         retBuffer.put(requestVoteMsgArray);
+        int l = requestVoteMsgArray.length+4 ;
+        LOG.info("request vote msg len = " + l) ;
 
         retBuffer.flip() ; // make it ready for reading
 

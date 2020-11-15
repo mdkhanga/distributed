@@ -63,6 +63,8 @@ public class PeerClient {
        this.remotePort = port ;
        this.peerServer = p ;
 
+
+
     }
 
 
@@ -101,7 +103,10 @@ public class PeerClient {
 
     public void queueSendMessage(ByteBuffer b) {
 
-        writeQueue.add(b) ;
+        synchronized (writeQueue) {
+            writeQueue.add(b);
+        }
+
         selector.wakeup() ;
 
     }
@@ -174,12 +179,13 @@ public class PeerClient {
                     LOG.info("No message to write") ;
                 } */
 
-
-                    if (clientChannel.isConnected() && writeQueue.peek() != null) {
-                        clientChannel.register(selector, SelectionKey.OP_WRITE);
-                        // LOG.info("Connected and soemthing to write");
-                    } else {
-                        // LOG.info("Connected and nothing to write");
+                    synchronized (writeQueue) {
+                        if (clientChannel.isConnected() && writeQueue.peek() != null) {
+                            clientChannel.register(selector, SelectionKey.OP_WRITE);
+                            // LOG.info("Connected and soemthing to write");
+                        } else {
+                            // LOG.info("Connected and nothing to write");
+                        }
                     }
 
                     // LOG.info("before select");
@@ -231,13 +237,17 @@ public class PeerClient {
             clientChannel.finishConnect() ;
             key.interestOps(SelectionKey.OP_WRITE) ;
             // peerServer.addPeer(remoteHost+":"+remotePort) ;
+            peerServer.addPeer(clientChannel, remoteHost, remotePort);
             LOG.info("finished connection");
         }
 
         private void write(SelectionKey key) throws IOException {
 
             ByteBuffer b ;
-            b = writeQueue.poll() ;
+
+            synchronized (writeQueue) {
+                b = writeQueue.poll();
+            }
 
             if (b != null) {
                // LOG.info("we got b to write") ;
@@ -291,8 +301,13 @@ public class PeerClient {
 
                 readBuf.rewind();
 
-                PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread,
-                        new ClientMessageHandlerCallable(peerClient, clientChannel, readBuf));
+                /* PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread,
+                        // new ClientMessageHandlerCallable(peerClient, clientChannel, readBuf));
+                        new ServerMessageHandlerCallable(clientChannel, readBuf)); */
+
+
+                PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread);
+
             } catch (IOException e) {
                 clientChannel.close() ;
                 key.cancel();
