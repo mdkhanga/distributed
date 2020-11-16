@@ -184,6 +184,11 @@ public class PeerServer {
 
     }
 
+    public void setRaftState(RaftState state) {
+        raftState = state ;
+    }
+
+
     public void accept() throws IOException {
 
 
@@ -567,7 +572,7 @@ public class PeerServer {
         Member m = peer.member();
         PeerData v = memberPeerDataMap.get(m);
 
-        AppendEntriesMessage p = new AppendEntriesMessage(1,
+        AppendEntriesMessage p = new AppendEntriesMessage(serverId.get(),
                 v.getNextSeq(),
                 rlog.size()-1,
                 lastComittedIndex.get());
