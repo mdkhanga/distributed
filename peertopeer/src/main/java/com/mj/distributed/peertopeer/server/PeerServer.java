@@ -634,6 +634,14 @@ public class PeerServer implements NioListenerConsumer {
 
     }
 
+    public void addPeer(SocketChannel sc, Peer p) {
+
+        socketChannelPeerMap.put(sc, p) ;
+        connectedMembersMap.put(p.member(), p);
+        memberPeerDataMap.put(p.member(), new PeerData(p.member().getHostString(), p.member().getPort()));
+
+    }
+
     public void addPeer(SocketChannel sc, String hostString, int port) {
         Member m = new Member(hostString, port, false);
         ListenerPeer l = new ListenerPeer(listener, m, sc) ;

@@ -5,7 +5,7 @@ import com.mj.distributed.model.Member;
 
 import java.nio.ByteBuffer;
 
-public class CallerPeer {
+public class CallerPeer implements Peer {
 
     private final Member member ; // member that we are connected to
     private final PeerClient peerClient ;
