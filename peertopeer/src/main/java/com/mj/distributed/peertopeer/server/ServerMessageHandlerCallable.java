@@ -86,7 +86,7 @@ public class ServerMessageHandlerCallable implements Callable {
             } else if (messageType == MessageType.AppendEntries.value()) {
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
                 PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
-                // LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
+                 LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
                 PeerServer.peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());
                 boolean entryResult = true ;
                 LogEntry e = message.getLogEntry() ;

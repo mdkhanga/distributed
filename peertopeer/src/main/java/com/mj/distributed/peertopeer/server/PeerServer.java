@@ -1,5 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.com.mj.distributed.tcp.nio.NioListener;
+import com.mj.distributed.com.mj.distributed.tcp.nio.NioListenerConsumer;
 import com.mj.distributed.message.AppendEntriesMessage;
 import com.mj.distributed.message.ClusterInfoMessage;
 import com.mj.distributed.message.HelloMessage;
@@ -23,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PeerServer {
+public class PeerServer implements NioListenerConsumer {
 
     private AtomicInteger serverId ;
 
@@ -47,6 +49,7 @@ public class PeerServer {
     private int bindPort ;
 
     Selector selector ;
+    private NioListener listener;
 
     public static InBoundMessageCreator inBoundMessageCreator = new InBoundMessageCreator() ;
 
@@ -107,15 +110,15 @@ public class PeerServer {
             }
         }
 
-        // if (leader) {
             Thread writerThread = new Thread(new ServerWriteRunnable());
             writerThread.start();
 
             Thread clientThread = new Thread(new ClientSimulator());
             clientThread.start();
-       // }
 
-        accept() ;
+            // accept() ;
+        listener = new NioListener(bindHost, bindPort, this);
+        listener.start();
 
 
     }
@@ -188,7 +191,7 @@ public class PeerServer {
         raftState = state ;
     }
 
-
+    /*
     public void accept() throws IOException {
 
 
@@ -218,20 +221,7 @@ public class PeerServer {
                 if (y == 1) {
 
 
-                   /* channelPeerMap.forEach((k, v) -> {
-
-                       try {
-                           if (v.peekWriteBuffer() != null) {
-                               k.register(selector, SelectionKey.OP_WRITE);
-                           }
-                           // selector.wakeup();
-                       } catch (Exception e) {
-                           LOG.error("error", e);
-                       }
-
-                   }); */
-
-                   connectedMembersMap.forEach((k,v) -> {
+                  connectedMembersMap.forEach((k,v) -> {
 
                        if (!(v instanceof ListenerPeer)) {
                            // from here (Listener) we can only send messages to CallerPeers
@@ -304,6 +294,7 @@ public class PeerServer {
 
     }
 
+    */
     private void accept(SelectionKey key) throws IOException {
 
         ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
@@ -370,6 +361,7 @@ public class PeerServer {
 
     }
 
+    /*
     private void write(SelectionKey key) throws IOException {
 
         SocketChannel sc = (SocketChannel) key.channel();
@@ -392,7 +384,7 @@ public class PeerServer {
 
         key.interestOps(SelectionKey.OP_READ);
 
-    }
+    } */
 
     public InBoundMessageCreator getInBoundMessageCreator() {
         return inBoundMessageCreator;
@@ -470,6 +462,23 @@ public class PeerServer {
 
         peerServer = new PeerServer(serverId, state) ;
         peerServer.start(seeds) ;
+    }
+
+    public void addedConnection(SocketChannel s) {
+
+        // do nothing this we get hello message
+
+    }
+
+    public void droppedConnection(SocketChannel s) {
+
+        removePeer(s);
+
+    }
+
+    public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
+
+        inBoundMessageCreator.submit(s, b, numBytes);
     }
 
     public void setLastLeaderHeartBeatTs(long ts) {
@@ -608,11 +617,6 @@ public class PeerServer {
     }
 
 
-     public void removePeer(String hostString, int port) {
-       clusterInfo.removeMember(hostString, port);
-       connectedMembersMap.remove(new Member(hostString, port));
-    }
-
     public void removePeer(SocketChannel sc) {
 
         Peer p = socketChannelPeerMap.get(sc) ;
@@ -632,7 +636,7 @@ public class PeerServer {
 
     public void addPeer(SocketChannel sc, String hostString, int port) {
         Member m = new Member(hostString, port, false);
-        ListenerPeer l = new ListenerPeer(m, sc) ;
+        ListenerPeer l = new ListenerPeer(listener, m, sc) ;
         clusterInfo.addMember(m);
         connectedMembersMap.put(m, l) ;
         memberPeerDataMap.put(m, new PeerData(hostString, port));

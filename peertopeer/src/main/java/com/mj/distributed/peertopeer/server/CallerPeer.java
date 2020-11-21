@@ -39,11 +39,11 @@ public class CallerPeer {
 
     }
 
-    public ByteBuffer peekMessageQueue() {
+   /* public ByteBuffer peekMessageQueue() {
         return null;
     }
 
     public ByteBuffer getNextQueuedMessage() {
         return null ;
-    }
+    } */
 }

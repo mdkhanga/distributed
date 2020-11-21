@@ -11,9 +11,9 @@ public interface Peer {
 
     void onReceiveMessage(Message m) ;
 
-    ByteBuffer peekMessageQueue() ;
+    // ByteBuffer peekMessageQueue() ;
 
-    ByteBuffer getNextQueuedMessage() ;
+    // ByteBuffer getNextQueuedMessage() ;
 
     boolean active() ;
 
