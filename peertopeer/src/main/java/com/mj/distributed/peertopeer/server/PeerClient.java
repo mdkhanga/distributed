@@ -236,8 +236,9 @@ public class PeerClient {
 
             clientChannel.finishConnect() ;
             key.interestOps(SelectionKey.OP_WRITE) ;
-            // peerServer.addPeer(remoteHost+":"+remotePort) ;
-            peerServer.addPeer(clientChannel, remoteHost, remotePort);
+
+            // peerServer.addPeer(clientChannel, remoteHost, remotePort);
+            peerServer.addPeer(clientChannel, new CallerPeer(new Member(remoteHost, remotePort), peerClient));
             LOG.info("finished connection");
         }
 
