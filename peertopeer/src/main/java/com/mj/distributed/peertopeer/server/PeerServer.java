@@ -169,21 +169,17 @@ public class PeerServer implements NioListenerConsumer {
 
     public void queueSendMessage(SocketChannel c, Message m) throws Exception {
 
-        /* PeerData d = channelPeerMap.get(c);
-        d.addMessageForPeer(m);
-
-        */
-
         Peer p = socketChannelPeerMap.get(c) ;
 
 
         p.queueSendMessage(m);
 
-        synchronized(x) {
+
+        /* synchronized(x) {
             x = 1 ;
         }
 
-        selector.wakeup() ;
+        selector.wakeup() ; */
 
     }
 
