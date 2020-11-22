@@ -187,200 +187,6 @@ public class PeerServer implements NioListenerConsumer {
         raftState = state ;
     }
 
-    /*
-    public void accept() throws IOException {
-
-
-        LOG.info("Server :" + serverId + " listening on port :" + bindPort) ;
-
-        // addPeer(bindHost+":"+bindPort) ;
-        // ServerSocket s = new ServerSocket(port) ;
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open() ;
-        serverSocketChannel.configureBlocking(false) ;
-
-        serverSocketChannel.socket().bind(new InetSocketAddress("localhost",bindPort));
-
-         selector = Selector.open();
-
-        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT) ;
-
-
-         try {
-
-            while (true) {
-
-                int y ;
-            synchronized (x) {
-                y = x ;
-            }
-
-                if (y == 1) {
-
-
-                  connectedMembersMap.forEach((k,v) -> {
-
-                       if (!(v instanceof ListenerPeer)) {
-                           // from here (Listener) we can only send messages to CallerPeers
-                           return ;
-                       }
-
-                       ListenerPeer listenerPeer = (ListenerPeer) v ;
-
-                       try {
-                           if (listenerPeer.peekMessageQueue() != null) {
-                               SocketChannel s = listenerPeer.socketChannel() ;
-                               s.register(selector, SelectionKey.OP_WRITE);
-                           }
-                           // selector.wakeup();
-                       } catch (Exception e) {
-                           LOG.error("error", e);
-                       }
-
-
-                   }) ;
-
-
-
-                   synchronized (x) {
-                       x = 0;
-                   }
-               }
-
-
-                selector.select();
-                // LOG.info("after select") ;
-
-                Iterator<SelectionKey> keysIterator = selector.selectedKeys().iterator();
-
-                while (keysIterator.hasNext()) {
-
-                    SelectionKey key = keysIterator.next();
-                    keysIterator.remove();
-
-
-                    if (key.isAcceptable()) {
-
-                        // LOG.info("Something to accept");
-                        accept(key) ;
-
-
-                    } else if (key.isReadable()) {
-
-                        // LOG.info("Something to read") ;
-                        read(key) ;
-
-
-                    } else if (key.isWritable()) {
-
-                        // LOG.info("Something to write") ;
-                        write(key) ;
-
-
-                    }
-
-
-                }
-
-
-            }
-
-        } catch(IOException e) {
-             LOG.error("Exception :",e) ;
-        }
-
-    }
-
-    */
-    private void accept(SelectionKey key) throws IOException {
-
-        ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-        SocketChannel sc = ssc.accept();
-        sc.configureBlocking(false);
-
-        InetSocketAddress socketAddress = (InetSocketAddress)sc.getRemoteAddress() ;
-
-        LOG.info("accepted connection from " + socketAddress.getHostString() +":" + socketAddress.getPort());
-
-        // delay this to after we get hello
-        //channelPeerMap.put(sc,new PeerData(socketAddress.getHostString())) ;
-
-        sc.register(this.selector, SelectionKey.OP_READ);
-    }
-
-    private void read(SelectionKey key) throws IOException {
-
-        SocketChannel sc = (SocketChannel) key.channel();
-        ByteBuffer readBuffer = ByteBuffer.allocate(8192);
-
-        int numread = 0;
-        int totalread = 0;
-        try {
-
-            numread = sc.read(readBuffer);
-            totalread = numread;
-            while (numread > 0) {
-                numread = sc.read(readBuffer);
-
-                totalread = totalread + numread;
-
-
-            }
-
-            if (numread == -1) {
-                // Remote entity shut the socket down cleanly. Do the
-                // same from our end and cancel the channel.
-                // key.channel().close();
-                // key.cancel();
-                throw new IOException("Read returned -1. Channel closed by client.") ;
-
-            }
-        } catch(IOException e) {
-
-            sc.close() ;
-            key.cancel() ;
-
-            /* PeerData p = channelPeerMap.get(sc) ;
-
-            LOG.info(p.getHostString() +":" +p.getPort() + " has left the cluster") ;
-            channelPeerMap.remove(sc) ;
-            removePeer(p.getHostString(), p.getPort()); */
-            removePeer(sc);
-        }
-
-        // System.out.println("Read :" + numread + " " + new String(readBuffer.array()));
-        readBuffer.rewind() ;
-
-        /*  inBoundMessageCreator.submit(sc,readBuffer,totalread,new ServerMessageHandlerCallable(sc,
-                readBuffer)); */
-
-        inBoundMessageCreator.submit(sc,readBuffer,totalread);
-
-    }
-
-    /*
-    private void write(SelectionKey key) throws IOException {
-
-        SocketChannel sc = (SocketChannel) key.channel();
-
-        // ByteBuffer towrite = channelPeerMap.get(sc).getNextWriteBuffer() ;
-        ByteBuffer towrite = socketChannelPeerMap.get(sc).getNextQueuedMessage() ;
-
-        if (towrite == null) {
-            LOG.warn("Write queue is emptyy") ;
-            key.interestOps(SelectionKey.OP_READ);
-            return ;
-        }
-
-
-        int n = sc.write(towrite);
-        while (n > 0 && towrite.remaining() > 0) {
-            n = sc.write(towrite);
-           // LOG.info("Server wrote bytes "+n) ;
-        }
-
-        key.interestOps(SelectionKey.OP_READ);
-
-    } */
 
     public InBoundMessageCreator getInBoundMessageCreator() {
         return inBoundMessageCreator;
@@ -529,7 +335,7 @@ public class PeerServer implements NioListenerConsumer {
                             x = 1;
                         }
 
-                        selector.wakeup();
+                        // selector.wakeup();
 
                     }
                      else if (raftState.equals(RaftState.candidate)) {
@@ -548,22 +354,22 @@ public class PeerServer implements NioListenerConsumer {
 
 
 
-                } else if (raftState.equals(RaftState.follower)) {
+                    } else if (raftState.equals(RaftState.follower)) {
 
 
-                    long timeSinceLastLeadetBeat = System.currentTimeMillis() -
+                        long timeSinceLastLeadetBeat = System.currentTimeMillis() -
                             peerServer.getlastLeaderHeartBeatts();
-                    if (peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > 1000) {
-                        LOG.info("We need a leader Election. No heartBeat in ") ;
-                        raftState = RaftState.candidate;
-                    }
+                        if (peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > 1000) {
+                            LOG.info("We need a leader Election. No heartBeat in ") ;
+                            raftState = RaftState.candidate;
+                        }
 
-                }
+                    }
 
                     count.incrementAndGet();
 
                 } catch (Exception e) {
-                    // System.out.println(e) ;
+                     System.out.println(e) ;
                 }
             }
 

@@ -51,7 +51,7 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 AckMessage message = AckMessage.deserialize(readBuffer.rewind());
                 Peer d = PeerServer.peerServer.getPeer(socketChannel);
-                LOG.info("Received ack message from " + d.member().getHostString() + ":" + d.member().getPort() + " with seq " + message.getSeqOfMessageAcked());
+                // LOG.info("Received ack message from " + d.member().getHostString() + ":" + d.member().getPort() + " with seq " + message.getSeqOfMessageAcked());
             } else if (messageType == 5) {
                 AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
                 PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
