@@ -1,5 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
+import com.mj.distributed.com.mj.distributed.tcp.nio.NioCaller;
+import com.mj.distributed.com.mj.distributed.tcp.nio.NioCallerConsumer;
 import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.LogEntry;
@@ -26,7 +28,7 @@ import java.util.concurrent.Executors;
 /**
  * Created by Manoj Khangaonkar on 10/5/2016.
  */
-public class PeerClient {
+public class PeerClient implements NioCallerConsumer {
 
     // Socket peer;
     PeerServer peerServer;
@@ -52,6 +54,8 @@ public class PeerClient {
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
 
+    private NioCaller nioCaller ;
+
 
     private PeerClient() {
 
@@ -70,7 +74,7 @@ public class PeerClient {
 
     public void start() throws Exception {
 
-        selector = Selector.open() ;
+        /* selector = Selector.open() ;
 
         clientChannel = SocketChannel.open();
         clientChannel.configureBlocking(false);
@@ -80,7 +84,11 @@ public class PeerClient {
         clientChannel.register(selector, SelectionKey.OP_CONNECT) ;
 
         PeerClientCallable peerClientCallable = new PeerClientCallable(this) ;
-        peerClientExecutor.submit(peerClientCallable) ;
+        peerClientExecutor.submit(peerClientCallable) ; */
+
+        nioCaller = new NioCaller(remoteHost, remotePort, this);
+        nioCaller.start();
+
         PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
         peerClientExecutor.submit(peerClientStatusCallable);
 
@@ -103,12 +111,25 @@ public class PeerClient {
 
     public void queueSendMessage(ByteBuffer b) {
 
-        synchronized (writeQueue) {
+        /* synchronized (writeQueue) {
             writeQueue.add(b);
         }
 
-        selector.wakeup() ;
+        selector.wakeup() ; */
 
+        nioCaller.queueSendMessage(b);
+    }
+
+    public void addedConnection(SocketChannel s) {
+        peerServer.addPeer(s, new CallerPeer(new Member(remoteHost, remotePort), this));
+    }
+
+    public void droppedConnection(SocketChannel s) {
+
+    }
+
+    public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
+        PeerServer.inBoundMessageCreator.submit(s, b, numBytes);
     }
 
 
@@ -167,17 +188,6 @@ public class PeerClient {
 
                 while (true) {
 
-               /* if (clientChannel.isConnected()) {
-                    LOG.info("Connected") ;
-                } else {
-                    LOG.info("Not Connected") ;
-                }
-
-                if (writeQueue.peek() != null) {
-                    LOG.info("We have a message to write") ;
-                } else {
-                    LOG.info("No message to write") ;
-                } */
 
                     synchronized (writeQueue) {
                         if (clientChannel.isConnected() && writeQueue.peek() != null) {
@@ -302,9 +312,6 @@ public class PeerClient {
 
                 readBuf.rewind();
 
-                /* PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread,
-                        // new ClientMessageHandlerCallable(peerClient, clientChannel, readBuf));
-                        new ServerMessageHandlerCallable(clientChannel, readBuf)); */
 
 
                 PeerServer.inBoundMessageCreator.submit(clientChannel, readBuf, totalread);
