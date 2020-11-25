@@ -46,6 +46,7 @@ public class ServerMessageHandlerCallable implements Callable {
                 d.setHostString(message.getHostString());
                 d.setPort(message.getHostPort()); */
                 PeerServer.peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
+                LOG.info("Registered peer " + message.getHostString() +":" + message.getHostPort());
 
             } else if (messageType == MessageType.Ack.value()) {
 
