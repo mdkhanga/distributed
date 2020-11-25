@@ -2,19 +2,13 @@ package com.mj.distributed.peertopeer.server;
 
 import com.mj.distributed.com.mj.distributed.tcp.nio.NioCaller;
 import com.mj.distributed.com.mj.distributed.tcp.nio.NioCallerConsumer;
-import com.mj.distributed.message.HelloMessage;
-import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.LogEntry;
-import com.mj.distributed.message.Message;
 import com.mj.distributed.model.Member;
 import org.slf4j.LoggerFactory ;
 import org.slf4j.Logger ;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.*;
@@ -30,7 +24,6 @@ import java.util.concurrent.Executors;
  */
 public class PeerClient implements NioCallerConsumer {
 
-    // Socket peer;
     PeerServer peerServer;
     DataOutputStream dos;
     Integer peerServerId = -1;
@@ -48,9 +41,6 @@ public class PeerClient implements NioCallerConsumer {
     public volatile Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
-
-    // List<byte[]> rlog = Collections.synchronizedList(new ArrayList<>());
-    // int lastComittedIndex  = -1 ;
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
 
@@ -85,11 +75,6 @@ public class PeerClient implements NioCallerConsumer {
     public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
 
         return peerServer.processLogEntry(e, prevIndex, lastComittedIndex);
-    }
-
-    public void sendMessage(Message m) {
-
-        // message needs to be queue and sent by a writer thread
     }
 
     public void setLeaderHeartBeatTs(long ts) {
