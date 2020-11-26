@@ -1,13 +1,10 @@
 package com.mj.distributed.peertopeer.server;
 
-import com.mj.distributed.com.mj.distributed.tcp.nio.NioListener;
+import com.mj.distributed.tcp.nio.NioListener;
 import com.mj.distributed.message.Message;
 import com.mj.distributed.model.Member;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class ListenerPeer implements Peer {
 

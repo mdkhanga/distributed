@@ -1,7 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
-import com.mj.distributed.com.mj.distributed.tcp.nio.NioCaller;
-import com.mj.distributed.com.mj.distributed.tcp.nio.NioCallerConsumer;
+import com.mj.distributed.tcp.nio.NioCaller;
+import com.mj.distributed.tcp.nio.NioCallerConsumer;
 import com.mj.distributed.model.LogEntry;
 import com.mj.distributed.model.Member;
 import org.slf4j.LoggerFactory ;

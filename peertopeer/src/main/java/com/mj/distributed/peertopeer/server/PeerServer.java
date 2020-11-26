@@ -1,7 +1,7 @@
 package com.mj.distributed.peertopeer.server;
 
-import com.mj.distributed.com.mj.distributed.tcp.nio.NioListener;
-import com.mj.distributed.com.mj.distributed.tcp.nio.NioListenerConsumer;
+import com.mj.distributed.tcp.nio.NioListener;
+import com.mj.distributed.tcp.nio.NioListenerConsumer;
 import com.mj.distributed.message.AppendEntriesMessage;
 import com.mj.distributed.message.ClusterInfoMessage;
 import com.mj.distributed.message.HelloMessage;
@@ -13,13 +13,8 @@ import com.mj.distributed.model.RaftState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
-import java.net.InetSocketAddress;
 import java.nio.*;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.*;

@@ -1,8 +1,5 @@
-package com.mj.distributed.com.mj.distributed.tcp.nio;
+package com.mj.distributed.tcp.nio;
 
-import com.mj.distributed.model.Member;
-import com.mj.distributed.peertopeer.server.CallerPeer;
-import com.mj.distributed.peertopeer.server.PeerServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

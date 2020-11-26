@@ -1,4 +1,4 @@
-package com.mj.distributed.com.mj.distributed.tcp.nio;
+package com.mj.distributed.tcp.nio;
 
 
 import org.slf4j.Logger;
