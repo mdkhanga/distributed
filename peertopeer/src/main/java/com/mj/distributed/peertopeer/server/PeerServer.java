@@ -108,8 +108,8 @@ public class PeerServer implements NioListenerConsumer {
             Thread writerThread = new Thread(new ServerWriteRunnable());
             writerThread.start();
 
-            Thread clientThread = new Thread(new ClientSimulator());
-            clientThread.start();
+           // Thread clientThread = new Thread(new ClientSimulator());
+           // clientThread.start();
 
             // accept() ;
         listener = new NioListener(bindHost, bindPort, this);
@@ -273,6 +273,10 @@ public class PeerServer implements NioListenerConsumer {
 
     }
 
+    public void addLogEntry(byte[] value) {
+        rlog.add(value);
+    }
+
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
 
         inBoundMessageCreator.submit(s, b, numBytes);
@@ -303,7 +307,9 @@ public class PeerServer implements NioListenerConsumer {
                 try {
                     Thread.sleep(200);
                     // Thread.sleep(1000);
-
+                    if (count.get() % 60 == 0) {
+                        logRlog();
+                    }
 
                     if (raftState.equals(RaftState.leader)) {
 
@@ -315,7 +321,7 @@ public class PeerServer implements NioListenerConsumer {
                                 sendAppendEntriesMessage(v);
 
                                 if (count.get() % 60 == 0) {
-                                    logRlog();
+                                    // logRlog();
                                     sendClusterInfoMessage(v);
                                 }
 

@@ -32,15 +32,11 @@ public class PeerClient implements NioCallerConsumer {
     InetAddress remoteIpAddress;
 
     String remoteHost ;
-    SocketChannel clientChannel ;
-
-    Selector selector ;
 
     ExecutorService peerClientExecutor = Executors.newFixedThreadPool(3) ;
 
     public volatile Queue<ByteBuffer> writeQueue = new ConcurrentLinkedDeque<ByteBuffer>() ;
 
-    private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
     Logger LOG = LoggerFactory.getLogger(PeerClient.class);
 

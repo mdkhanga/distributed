@@ -12,12 +12,10 @@ import java.nio.ByteBuffer;
 
 public class HelloMessage implements Message {
 
-    // private int messageType = 1 ;
     private MessageType messageType = MessageType.Hello ;
     private String greeting = "Hello" ;
     private String hostString ;
     private int hostPort ;
-    private int recordsize ;
 
     private static Logger LOG  = LoggerFactory.getLogger(HelloMessage.class) ;
 
@@ -26,7 +24,7 @@ public class HelloMessage implements Message {
         this.hostString = host ;
         this.hostPort = port ;
 
-          }
+    }
 
     public String getHostString() {
         return hostString ;

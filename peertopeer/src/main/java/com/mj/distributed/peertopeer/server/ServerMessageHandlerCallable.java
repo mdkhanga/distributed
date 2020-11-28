@@ -42,9 +42,6 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Received a hello message");
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
-                /* PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
-                d.setHostString(message.getHostString());
-                d.setPort(message.getHostPort()); */
                 PeerServer.peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
                 LOG.info("Registered peer " + message.getHostString() +":" + message.getHostPort());
 
@@ -57,7 +54,7 @@ public class ServerMessageHandlerCallable implements Callable {
                 AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
                 PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
                 int index = d.getIndexAcked(message.getSeqOfMessageAcked());
-                LOG.info("Got AppendEntries response from" + d.getHostString() + "  " + d.getPort()) ;
+                // LOG.info("Got AppendEntries response from" + d.getHostString() + "  " + d.getPort()) ;
 
 
                 if (index >= 0) {
@@ -88,7 +85,7 @@ public class ServerMessageHandlerCallable implements Callable {
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
                 PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
 
-                LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
+                // LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
                 PeerServer.peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());
                 boolean entryResult = true ;
                 LogEntry e = message.getLogEntry() ;
@@ -113,6 +110,15 @@ public class ServerMessageHandlerCallable implements Callable {
                     LOG.info("Did not get vote. Lost the election");
                 }
 
+            } else if (messageType == MessageType.RaftClientHello.value()) {
+
+                LOG.info("Received a RaftClientHello message") ;
+
+            } else if (messageType == MessageType.RaftClientAppendEntry.value()) {
+
+                LOG.info("Received a RaftClientAppendEntry message");
+                RaftClientAppendEntry message = RaftClientAppendEntry.deserialize(readBuffer.rewind());
+                PeerServer.peerServer.addLogEntry(message.getValue());
 
             }
             else {

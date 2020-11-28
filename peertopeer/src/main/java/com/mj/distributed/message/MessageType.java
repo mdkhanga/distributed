@@ -8,7 +8,9 @@ public enum MessageType {
     AppendEntriesResponse(5),
     ClusterInfo(6),
     RequestVote(7),
-    RequestVoteResponse(8) ;
+    RequestVoteResponse(8),
+    RaftClientHello(10),
+    RaftClientAppendEntry(11);
 
     private int value ;
 
