@@ -5,9 +5,9 @@ import java.util.Objects;
 
 public class Member {
 
-    private String hostString ;
-    private int port ;
-    private boolean leader = false;
+    private final String hostString ;
+    private final int port ;
+    private final boolean leader ;
 
     public Member( String h, int p, boolean leader) {
 
@@ -20,6 +20,7 @@ public class Member {
 
         this.hostString = h ;
         this.port = p ;
+        this.leader = false;
     }
 
     public String getHostString() {

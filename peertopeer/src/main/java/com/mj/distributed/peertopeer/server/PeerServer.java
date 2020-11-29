@@ -187,7 +187,7 @@ public class PeerServer implements NioListenerConsumer {
         return inBoundMessageCreator;
     }
 
-    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
+    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) throws Exception {
 
 
         boolean ret = true ;
@@ -205,10 +205,10 @@ public class PeerServer implements NioListenerConsumer {
 
             // LOG.info("prev = " + prevIndex + " expectedNext = " + expectedNextEntry) ;
             if (prevIndex + 1 == expectedNextEntry) {
-                synchronized (rlog) {
+                /* synchronized (rlog) {
                     rlog.add(data);
-                    // LOG.info("added to rlog") ;
-                }
+                } */
+                addLogEntry(data);
                 ret = true ;
                 if (lastComittedIndex <= expectedNextEntry) {
                     this.lastComittedIndex.set(lastComittedIndex);
@@ -273,8 +273,9 @@ public class PeerServer implements NioListenerConsumer {
 
     }
 
-    public void addLogEntry(byte[] value) {
+    public void addLogEntry(byte[] value) throws Exception {
         rlog.add(value);
+        logRlog();
     }
 
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
@@ -307,9 +308,10 @@ public class PeerServer implements NioListenerConsumer {
                 try {
                     Thread.sleep(200);
                     // Thread.sleep(1000);
-                    if (count.get() % 60 == 0) {
+
+                    /* if (count.get() % 60 == 0) {
                         logRlog();
-                    }
+                    } */
 
                     if (raftState.equals(RaftState.leader)) {
 
@@ -464,31 +466,6 @@ public class PeerServer implements NioListenerConsumer {
         return memberPeerDataMap.get(p.member());
     }
 
-    /* public void logCluster() throws Exception {
-
-        StringBuilder sb = new StringBuilder("Cluster members [") ;
-
-        LOG.info("number of members "+members.size()) ;
-
-        members.forEach((k)->{
-
-            try {
-
-                sb.append(k) ;
-                sb.append(",") ;
-
-
-            } catch(Exception e) {
-                LOG.error("Error getting remote address ",e) ;
-            }
-
-        });
-
-        sb.append("]") ;
-
-        LOG.info(sb.toString()) ;
-
-    } */
 
     public void logRlog() throws Exception {
 

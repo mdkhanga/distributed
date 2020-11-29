@@ -63,12 +63,12 @@ public class PeerClient implements NioCallerConsumer {
         nioCaller = new NioCaller(remoteHost, remotePort, this);
         nioCaller.start();
 
-        PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
-        peerClientExecutor.submit(peerClientStatusCallable);
+        // PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();
+        // peerClientExecutor.submit(peerClientStatusCallable);
 
     }
 
-    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) {
+    public boolean processLogEntry(LogEntry e, int prevIndex, int lastComittedIndex) throws Exception {
 
         return peerServer.processLogEntry(e, prevIndex, lastComittedIndex);
     }
