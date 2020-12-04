@@ -4,11 +4,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
-public class RaftClientHello implements Message  {
+public class TestClientHello implements Message  {
 
-    private MessageType messageType = MessageType.RaftClientHello;
+    private MessageType messageType = MessageType.TestClientHello;
 
-    public RaftClientHello( ) {
+    public TestClientHello( ) {
 
     }
 
@@ -29,17 +29,17 @@ public class RaftClientHello implements Message  {
         return retBuffer ;
     }
 
-    public static RaftClientHello deserialize(ByteBuffer readBuffer) {
+    public static TestClientHello deserialize(ByteBuffer readBuffer) {
 
         int messagesize = readBuffer.getInt() ;
 
         int messageType = readBuffer.getInt() ;
         if (messageType != MessageType.RaftClientHello.value()) {
 
-            throw new RuntimeException("Message is not the expected type RaftClientHello") ;
+            throw new RuntimeException("Message is not the expected type TestClientHello") ;
         }
 
-        return new RaftClientHello() ;
+        return new TestClientHello() ;
     }
 
 }

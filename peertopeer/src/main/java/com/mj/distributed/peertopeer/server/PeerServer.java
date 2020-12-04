@@ -98,7 +98,7 @@ public class PeerServer implements NioListenerConsumer {
                 LOG.info("Connecting to " + seed) ;
                 PeerClient peer = new PeerClient(remoteaddrAndPort[0],Integer.parseInt(remoteaddrAndPort[1]),this);
                 peer.start();
-                HelloMessage m = new HelloMessage(peerServer.getBindHost(),peerServer.getBindPort());
+                HelloMessage m = new HelloMessage(getBindHost(),getBindPort());
                 peer.queueSendMessage(m.serialize());
                 LOG.info("Done write hello to q") ;
 

@@ -10,7 +10,10 @@ public enum MessageType {
     RequestVote(7),
     RequestVoteResponse(8),
     RaftClientHello(10),
-    RaftClientAppendEntry(11);
+    RaftClientAppendEntry(11),
+    GetServerLog(12),
+    GetServerLogResponse(13),
+    TestClientHello(14);
 
     private int value ;
 

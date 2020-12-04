@@ -57,11 +57,12 @@ public class RaftClient implements NioCallerConsumer {
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
 
 
+
     }
 
     public static void main(String[] args) throws Exception {
 
-        RaftClient client = new RaftClient("localhost",5001);
+        RaftClient client = new RaftClient("localhost",5002);
         client.connect();
         client.send(23);
 

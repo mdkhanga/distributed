@@ -125,19 +125,14 @@ public class AppendEntriesMessage implements Message {
         AppendEntriesMessage newMsg = new AppendEntriesMessage(leaderId, seqId, prevIndex, leaderCommitIndex);
 
         int numEntries = b.getInt() ;
-        // LOG.info("Deser num log entries " + numEntries) ;
-
-        while (numEntries > 0) {
-            // LOG.info("reading entries") ;
+       while (numEntries > 0) {
             int size = b.getInt();
             byte[] entrybytes = new byte[size];
-            int position = b.position() ;
             b = b.get(entrybytes, 0, size);
             newMsg.addLogEntry(LogEntry.fromBytes(entrybytes));
             --numEntries;
         }
 
-        // LOG.info("returning deserialized appendEntriesMsg") ;
         return newMsg ;
     }
 }
