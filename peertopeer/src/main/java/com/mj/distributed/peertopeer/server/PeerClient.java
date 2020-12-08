@@ -90,7 +90,7 @@ public class PeerClient implements NioCallerConsumer {
     }
 
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {
-        PeerServer.inBoundMessageCreator.submit(s, b, numBytes);
+        peerServer.inBoundMessageCreator.submit(s, b, numBytes);
     }
 
 

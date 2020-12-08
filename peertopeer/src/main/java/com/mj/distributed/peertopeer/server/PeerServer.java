@@ -46,9 +46,11 @@ public class PeerServer implements NioListenerConsumer {
     Selector selector ;
     private NioListener listener;
 
-    public static InBoundMessageCreator inBoundMessageCreator = new InBoundMessageCreator() ;
+    // public static InBoundMessageCreator inBoundMessageCreator = new InBoundMessageCreator() ;
 
-    public static PeerServer peerServer ;
+    public InBoundMessageCreator inBoundMessageCreator;
+
+    // public static PeerServer peerServer ;
 
     List<byte[]> rlog = Collections.synchronizedList(new ArrayList<>());
     volatile AtomicInteger lastComittedIndex  = new AtomicInteger(-1) ;
@@ -75,6 +77,7 @@ public class PeerServer implements NioListenerConsumer {
         // }
 
         raftState = state ;
+        inBoundMessageCreator = new InBoundMessageCreator(this);
     }
 
     public void start(String[] seed) throws Exception {
@@ -105,7 +108,7 @@ public class PeerServer implements NioListenerConsumer {
             }
         }
 
-            Thread writerThread = new Thread(new ServerWriteRunnable());
+            Thread writerThread = new Thread(new ServerWriteRunnable(this));
             writerThread.start();
 
            // Thread clientThread = new Thread(new ClientSimulator());
@@ -228,6 +231,20 @@ public class PeerServer implements NioListenerConsumer {
         return ret ;
     }
 
+    public List<byte[]> getLogEntries(int start, int count) {
+
+        ArrayList<byte[]> ret = new ArrayList<>();
+
+        for (int i = start; i < start+count ; i++) {
+
+            ret.add(rlog.get(i));
+
+        }
+
+        return ret ;
+
+    }
+
 
     public static void main(String args[]) throws Exception {
 
@@ -257,7 +274,7 @@ public class PeerServer implements NioListenerConsumer {
 
         System.out.println("Starting server with serverId:" + serverId) ;
 
-        peerServer = new PeerServer(serverId, state) ;
+        PeerServer peerServer = new PeerServer(serverId, state) ;
         peerServer.start(seeds) ;
     }
 
@@ -297,6 +314,13 @@ public class PeerServer implements NioListenerConsumer {
 
 
     public class ServerWriteRunnable implements Runnable {
+
+        PeerServer peerServer;
+
+        ServerWriteRunnable(PeerServer p) {
+
+            peerServer = p;
+        }
 
 
         public void run() {
@@ -455,6 +479,11 @@ public class PeerServer implements NioListenerConsumer {
         memberPeerDataMap.put(m, new PeerData(hostString, port));
         socketChannelPeerMap.put(sc, l);
 
+    }
+
+    public void addRaftClient(SocketChannel sc) {
+        ListenerPeer l = new ListenerPeer(listener, null, sc) ;
+        socketChannelPeerMap.put(sc, l);
     }
 
     public Peer getPeer(SocketChannel s) {

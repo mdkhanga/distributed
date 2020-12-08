@@ -86,6 +86,7 @@ public class GetServerLogResponse implements Message {
             byte[] entry = new byte[size];
             readBuffer.get(entry, 0, size);
             entries.add(entry);
+            --numEntries;
         }
 
 

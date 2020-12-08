@@ -24,7 +24,9 @@ public class InBoundMessageCreator {
     PeerServer peerServer ;
     InBoundMessageHandler inBoundMessageHandler ;
 
-    public InBoundMessageCreator() {
+    public InBoundMessageCreator(PeerServer p) {
+
+        peerServer = p ;
 
         inBoundMessageHandler = new InBoundMessageHandler() ;
 
@@ -36,7 +38,7 @@ public class InBoundMessageCreator {
         ByteBuffer newBuffer = ByteBuffer.allocate(bytesinbuffer);
         System.arraycopy(b.array(),0,newBuffer.array(),0,bytesinbuffer);
 
-        inBoundMessageParser.submit(new InBoundMessageReader(s,newBuffer,bytesinbuffer)) ;
+        inBoundMessageParser.submit(new InBoundMessageReader(peerServer, s,newBuffer,bytesinbuffer)) ;
     }
 
     public class InBoundMessageReader implements Callable {
@@ -44,10 +46,12 @@ public class InBoundMessageCreator {
         SocketChannel socketChannel ;
         ByteBuffer readBuffer ;
         int numbytes ;
+        PeerServer peerServer;
         // Callable handler ;
 
-        public InBoundMessageReader(SocketChannel s, ByteBuffer b,int numbyt) {
+        public InBoundMessageReader(PeerServer p, SocketChannel s, ByteBuffer b,int numbyt) {
 
+            peerServer = p;
             socketChannel = s ;
             readBuffer = b ;
             numbytes = numbyt ;
@@ -92,7 +96,7 @@ public class InBoundMessageCreator {
                     // LOG.info("src Pos = " + srcPos) ;
                     newBuffer.put(readBuffer.array(), srcPos, messagesize+4 );
 
-                    inBoundMessageHandler.submit(new ServerMessageHandlerCallable(socketChannel,
+                    inBoundMessageHandler.submit(new ServerMessageHandlerCallable(peerServer, socketChannel,
                             newBuffer.rewind()));
 
                     numbytes = numbytes - messagesize ;

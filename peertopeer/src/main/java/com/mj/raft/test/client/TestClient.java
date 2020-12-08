@@ -51,7 +51,7 @@ public class TestClient implements NioCallerConsumer {
     public List<byte[]> get(int start, int count) throws Exception {
 
         Integer id = seq.getAndIncrement();
-        GetServerLog gsLog = new GetServerLog(id, 0, 10, (byte)0);
+        GetServerLog gsLog = new GetServerLog(id, 0, count, (byte)0);
         nioCaller.queueSendMessage(gsLog.serialize());
         messageWaitingResponse = id;
         synchronized (messageWaitingResponse) {
@@ -79,6 +79,8 @@ public class TestClient implements NioCallerConsumer {
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b)  {
 
         try {
+
+            LOG.info("Test client Received a GetServerLog response message");
 
             synchronized (messageWaitingResponse) {
 

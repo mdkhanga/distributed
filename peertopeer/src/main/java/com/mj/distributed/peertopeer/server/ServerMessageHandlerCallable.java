@@ -8,17 +8,20 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 public class ServerMessageHandlerCallable implements Callable {
 
     SocketChannel socketChannel ;
     ByteBuffer readBuffer ;
+    PeerServer peerServer;
 
     Logger LOG  = LoggerFactory.getLogger(ServerMessageHandlerCallable.class) ;
 
-    public ServerMessageHandlerCallable(SocketChannel s , ByteBuffer b) {
+    public ServerMessageHandlerCallable(PeerServer p, SocketChannel s , ByteBuffer b) {
 
+        peerServer = p ;
         socketChannel = s ;
         readBuffer = b ;
 
@@ -42,24 +45,29 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Received a hello message");
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
-                PeerServer.peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
-                LOG.info("Registered peer " + message.getHostString() +":" + message.getHostPort());
+                peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
+                LOG.info("Registered peer " + message.getHostString() + ":" + message.getHostPort());
+
+            } else if(messageType == MessageType.TestClientHello.value()) {
+
+                LOG.info("Received a TestClient hello message");
+                peerServer.addRaftClient(socketChannel);
 
             } else if (messageType == MessageType.Ack.value()) {
 
                 AckMessage message = AckMessage.deserialize(readBuffer.rewind());
-                Peer d = PeerServer.peerServer.getPeer(socketChannel);
+
                 // LOG.info("Received ack message from " + d.member().getHostString() + ":" + d.member().getPort() + " with seq " + message.getSeqOfMessageAcked());
             } else if (messageType == 5) {
                 AppendEntriesResponse message = AppendEntriesResponse.deserialize(readBuffer.rewind());
-                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                PeerData d = peerServer.getPeerData(socketChannel);
                 int index = d.getIndexAcked(message.getSeqOfMessageAcked());
                 // LOG.info("Got AppendEntries response from" + d.getHostString() + "  " + d.getPort()) ;
 
 
                 if (index >= 0) {
                    // LOG.info("got index for seqId " + message.getSeqOfMessageAcked()) ;
-                    PeerServer.peerServer.updateIndexAckCount(index);
+                    peerServer.updateIndexAckCount(index);
                 } else {
                     // LOG.info("Not updating ack count") ;
                 }
@@ -79,25 +87,25 @@ public class ServerMessageHandlerCallable implements Callable {
                         true);
 
                 LOG.info("Queueing response");
-                PeerServer.peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage);
+                peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage);
 
             } else if (messageType == MessageType.AppendEntries.value()) {
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
-                PeerData d = PeerServer.peerServer.getPeerData(socketChannel);
+                PeerData d = peerServer.getPeerData(socketChannel);
 
                 // LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
-                PeerServer.peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());
+                peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());
                 boolean entryResult = true ;
                 LogEntry e = message.getLogEntry() ;
-                entryResult = PeerServer.peerServer.processLogEntry(e,message.getPrevIndex(),message.getLeaderCommitIndex()) ;
+                entryResult = peerServer.processLogEntry(e,message.getPrevIndex(),message.getLeaderCommitIndex()) ;
                 AppendEntriesResponse resp = new AppendEntriesResponse(message.getSeqId(), 1, entryResult);
                 ByteBuffer b = resp.serialize();
-                PeerServer.peerServer.queueSendMessage(socketChannel, resp);
+                peerServer.queueSendMessage(socketChannel, resp);
             }  else if (messageType == MessageType.ClusterInfo.value()) {
 
                 ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
                 LOG.info("Received clusterInfoMsg:" + message.toString());
-                PeerServer.peerServer.setClusterInfo(message.getClusterInfo());
+                peerServer.setClusterInfo(message.getClusterInfo());
             } else if (messageType == MessageType.RequestVoteResponse.value()) {
 
                 LOG.info("Received RequestVoteResponse Message") ;
@@ -105,7 +113,7 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 if (message.getVote()) {
                     LOG.info("Got vote. Won the election") ;
-                    PeerServer.peerServer.setRaftState(RaftState.leader);
+                    peerServer.setRaftState(RaftState.leader);
                 } else {
                     LOG.info("Did not get vote. Lost the election");
                 }
@@ -118,8 +126,20 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Received a RaftClientAppendEntry message");
                 RaftClientAppendEntry message = RaftClientAppendEntry.deserialize(readBuffer.rewind());
-                PeerServer.peerServer.addLogEntry(message.getValue());
+                peerServer.addLogEntry(message.getValue());
 
+            } else if (messageType == MessageType.GetServerLog.value()) {
+
+                LOG.info("Received a GetServerLog message");
+
+                GetServerLog message = GetServerLog.deserialize(readBuffer.rewind());
+
+                List<byte[]> ret = peerServer.getLogEntries(message.getStartIndex(), message.getCount());
+
+                GetServerLogResponse response = new GetServerLogResponse(message.getSeqId(), ret);
+
+                LOG.info("Sending a GetServerLog response message");
+                peerServer.queueSendMessage(socketChannel, response);
             }
             else {
                 LOG.info("Received message of unknown type " + messageType);

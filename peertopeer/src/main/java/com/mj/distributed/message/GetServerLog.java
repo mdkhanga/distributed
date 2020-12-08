@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 
 public class GetServerLog implements Message {
 
-    private static MessageType messageType = MessageType.RequestVote ;
+    private static MessageType messageType = MessageType.GetServerLog ;
 
     private final int seqId;
     private final int startIndex;
@@ -42,6 +42,14 @@ public class GetServerLog implements Message {
 
     public int getSeqId() {
         return seqId;
+    }
+
+    public int getStartIndex() {
+        return startIndex;
+    }
+
+    public int getCount() {
+        return count;
     }
 
     /**
