@@ -13,7 +13,8 @@ public enum MessageType {
     RaftClientAppendEntry(11),
     GetServerLog(12),
     GetServerLogResponse(13),
-    TestClientHello(14);
+    TestClientHello(14),
+    GetClusterInfo(15);
 
     private int value ;
 

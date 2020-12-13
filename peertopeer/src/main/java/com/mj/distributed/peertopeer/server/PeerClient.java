@@ -86,7 +86,7 @@ public class PeerClient implements NioCallerConsumer {
     }
 
     public void droppedConnection(SocketChannel s) {
-
+        peerServer.removePeer(s);
     }
 
     public void consumeMessage(SocketChannel s, int numBytes, ByteBuffer b) {

@@ -32,6 +32,8 @@ public class NioListener {
 
     private NioListenerConsumer nioListenerConsumer;
 
+    private boolean stop = false;
+
     private Logger LOG  = LoggerFactory.getLogger(NioListener.class);
 
     public NioListener(String bindHost, int port, NioListenerConsumer n) {
@@ -43,8 +45,13 @@ public class NioListener {
 
     public void start() {
 
+        stop = false;
         executorThread.submit(this::call) ;
 
+    }
+
+    public void stop() {
+        stop = true ;
     }
 
     public Void call() {
@@ -57,7 +64,7 @@ public class NioListener {
             selector = Selector.open();
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-            while(true) {
+            while(!stop) {
 
                 try {
 

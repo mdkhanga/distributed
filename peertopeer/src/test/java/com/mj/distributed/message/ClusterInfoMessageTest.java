@@ -2,11 +2,12 @@ package com.mj.distributed.message;
 
 import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.Member;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
 
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.*;
+
 
 public class ClusterInfoMessageTest {
 

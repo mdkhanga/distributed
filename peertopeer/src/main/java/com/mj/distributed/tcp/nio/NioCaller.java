@@ -189,6 +189,7 @@ public class NioCaller {
             String s = remoteHost +":"+remotePort ;
             LOG.info(s + " has left the cluster") ;
             // peerServer.removePeer(s);
+            nioCallerConsumer.droppedConnection(clientChannel);
 
         }
 

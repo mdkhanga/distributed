@@ -1,6 +1,7 @@
 package com.mj.raft.test.client;
 
 import com.mj.distributed.message.*;
+import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.peertopeer.server.PeerClient;
 import com.mj.distributed.tcp.nio.NioCaller;
 import com.mj.distributed.tcp.nio.NioCallerConsumer;
@@ -13,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+// Not thread safe
 public class TestClient implements NioCallerConsumer {
 
     private final String hostString;
@@ -68,6 +70,26 @@ public class TestClient implements NioCallerConsumer {
 
     }
 
+    public ClusterInfo getClusterInfo() throws Exception {
+
+        Integer id = seq.getAndIncrement();
+        GetClusterInfoMessage getClusterInfo = new GetClusterInfoMessage();
+        nioCaller.queueSendMessage(getClusterInfo.serialize());
+        messageWaitingResponse = id;
+        synchronized (messageWaitingResponse) {
+
+            while(response == null ) {
+
+                messageWaitingResponse.wait();
+
+            }
+
+            ClusterInfoMessage r = (ClusterInfoMessage) response ;
+            return r.getClusterInfo();
+        }
+
+    }
+
     public void addedConnection(SocketChannel s) {
 
     }
@@ -80,12 +102,19 @@ public class TestClient implements NioCallerConsumer {
 
         try {
 
-            LOG.info("Test client Received a GetServerLog response message");
+            LOG.info("Test client Received a response message "+numBytes);
 
             synchronized (messageWaitingResponse) {
 
                 // FIXME: could be a partial message or multiple messages
-                response = GetServerLogResponse.deserialize(b);
+                int messageSize = b.getInt();
+                int messageType = b.getInt() ;
+
+                if (messageType == MessageType.GetServerLogResponse.value()) {
+                    response = GetServerLogResponse.deserialize(b.rewind());
+                } else if (messageType == MessageType.ClusterInfo.value()) {
+                    response = ClusterInfoMessage.deserialize(b.rewind());
+                }
                 messageWaitingResponse.notifyAll();
 
             }

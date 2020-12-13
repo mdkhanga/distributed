@@ -140,6 +140,12 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info("Sending a GetServerLog response message");
                 peerServer.queueSendMessage(socketChannel, response);
+            } else if (messageType == MessageType.GetClusterInfo.value()) {
+                LOG.info("Received request for clusterInfo");
+                ClusterInfoMessage cm = new ClusterInfoMessage(peerServer.getClusterInfo());
+                LOG.info("cm message size = "+cm.serialize().limit());
+                peerServer.queueSendMessage(socketChannel, cm);
+
             }
             else {
                 LOG.info("Received message of unknown type " + messageType);

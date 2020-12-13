@@ -1,7 +1,8 @@
 package com.mj.distributed.message;
 
 import com.mj.distributed.model.LogEntry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
 
 import java.nio.ByteBuffer;
 

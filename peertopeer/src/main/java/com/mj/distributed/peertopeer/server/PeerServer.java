@@ -45,6 +45,7 @@ public class PeerServer implements NioListenerConsumer {
 
     Selector selector ;
     private NioListener listener;
+    private Member thisMember ;
 
     // public static InBoundMessageCreator inBoundMessageCreator = new InBoundMessageCreator() ;
 
@@ -68,6 +69,9 @@ public class PeerServer implements NioListenerConsumer {
 
     ExecutorService peerServerExecutor = Executors.newFixedThreadPool(3) ;
 
+    Thread writerThread;
+    private volatile boolean stop = false ;
+
     public PeerServer(int id, RaftState state) {
 
         serverId = new AtomicInteger(id) ;
@@ -83,11 +87,12 @@ public class PeerServer implements NioListenerConsumer {
     public void start(String[] seed) throws Exception {
 
 
-
+        thisMember = new Member(bindHost, bindPort, true) ;
         if (raftState.equals(RaftState.leader)) {
 
             // initiate connect to peers
-            clusterInfo.addMember(new Member(bindHost, bindPort, true));
+
+            clusterInfo.addMember(thisMember);
 
         }
 
@@ -108,7 +113,7 @@ public class PeerServer implements NioListenerConsumer {
             }
         }
 
-            Thread writerThread = new Thread(new ServerWriteRunnable(this));
+            writerThread = new Thread(new ServerWriteRunnable(this));
             writerThread.start();
 
            // Thread clientThread = new Thread(new ClientSimulator());
@@ -118,7 +123,12 @@ public class PeerServer implements NioListenerConsumer {
         listener = new NioListener(bindHost, bindPort, this);
         listener.start();
 
+    }
 
+    public void stop() {
+
+        stop = true;
+        listener.stop();
     }
 
     public String getBindHost() {
@@ -183,6 +193,11 @@ public class PeerServer implements NioListenerConsumer {
 
     public void setRaftState(RaftState state) {
         raftState = state ;
+        if (state == RaftState.leader) {
+            // clusterInfo.setLeader(thisMember);
+            ClusterInfo newClusterInfo = new ClusterInfo(thisMember, new ArrayList<>(clusterInfo.getMembers()));
+            clusterInfo = newClusterInfo;
+        }
     }
 
 
@@ -327,7 +342,7 @@ public class PeerServer implements NioListenerConsumer {
 
             AtomicInteger count = new AtomicInteger(1);
 
-            while (true) {
+            while (!stop) {
 
                 try {
                     Thread.sleep(200);
@@ -528,37 +543,7 @@ public class PeerServer implements NioListenerConsumer {
 
     }
 
-    public class ClientSimulator implements Runnable {
 
-        Random r = new Random() ;
-
-        public void run()  {
-
-            if (!raftState.equals(RaftState.leader)) {
-                LOG.info("Not a leader not starting client thread");
-                return ;
-            }
-
-            try {
-
-                Thread.sleep(30000);
-                int i = 0;
-
-                while (i < 10) {
-
-                    Thread.sleep(10000);
-                    int value = (int)(Math.random()*100);
-                    rlog.add(ByteBuffer.allocate(4).putInt(value).array());
-                    i++;
-
-                }
-
-            } catch(Exception e) {
-                LOG.error("Error in client simulator thread",e);
-            }
-        }
-
-    }
 
     private int getIndexToReplicate(PeerData d) {
 
