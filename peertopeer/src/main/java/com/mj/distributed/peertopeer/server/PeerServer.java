@@ -34,7 +34,7 @@ public class PeerServer implements NioListenerConsumer {
 
    // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
 
-    private volatile ClusterInfo clusterInfo = new ClusterInfo();
+    private volatile ClusterInfo clusterInfo ;
 
     Integer x = 0 ;
 
@@ -76,9 +76,20 @@ public class PeerServer implements NioListenerConsumer {
 
         serverId = new AtomicInteger(id) ;
         bindPort = 5000+serverId.get() ;
-        // if (id == 1) {
-        //    leader = true ;
-        // }
+        _peerServer(id, 5000+serverId.get(),state);
+
+    }
+
+    public PeerServer(int id, int port, RaftState state) {
+
+        serverId = new AtomicInteger(id) ;
+        _peerServer(id, port, state);
+
+    }
+
+    public void _peerServer(int id, int port, RaftState state) {
+
+        bindPort = port;
 
         raftState = state ;
         inBoundMessageCreator = new InBoundMessageCreator(this);
@@ -91,8 +102,7 @@ public class PeerServer implements NioListenerConsumer {
         if (raftState.equals(RaftState.leader)) {
 
             // initiate connect to peers
-
-            clusterInfo.addMember(thisMember);
+            clusterInfo = new ClusterInfo(thisMember, new ArrayList<Member>());
 
         }
 
@@ -125,7 +135,7 @@ public class PeerServer implements NioListenerConsumer {
 
     }
 
-    public void stop() {
+    public void stop() throws Exception {
 
         stop = true;
         listener.stop();
@@ -454,9 +464,12 @@ public class PeerServer implements NioListenerConsumer {
 
     // public void sendClusterInfoMessage(PeerData v) throws Exception {
     public void sendClusterInfoMessage(Peer peer) throws Exception {
-        ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
-        // v.addMessageForPeer(cm);
-        peer.queueSendMessage(cm);
+
+        if (clusterInfo.getLeader() != null) {
+            ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
+            // v.addMessageForPeer(cm);
+            peer.queueSendMessage(cm);
+        }
 
     }
 

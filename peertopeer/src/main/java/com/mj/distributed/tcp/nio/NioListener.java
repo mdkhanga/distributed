@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -28,9 +30,10 @@ public class NioListener {
 
     private ExecutorService executorThread = Executors.newFixedThreadPool(1);
 
+    private ServerSocketChannel serverSocketChannel;
     private Selector selector;
 
-    private NioListenerConsumer nioListenerConsumer;
+    private final NioListenerConsumer nioListenerConsumer;
 
     private boolean stop = false;
 
@@ -50,16 +53,21 @@ public class NioListener {
 
     }
 
-    public void stop() {
+    public void stop() throws Exception {
         stop = true ;
+        serverSocketChannel.socket().close();
+        serverSocketChannel.close();
+
     }
 
     public Void call() {
 
         try {
 
-            ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+            serverSocketChannel = ServerSocketChannel.open();
             serverSocketChannel.configureBlocking(false);
+            serverSocketChannel.setOption(StandardSocketOptions.SO_REUSEADDR,true);
+            serverSocketChannel.socket().setReuseAddress(true);
             serverSocketChannel.socket().bind(new InetSocketAddress("localhost", bindPort));
             selector = Selector.open();
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);

@@ -33,6 +33,10 @@ public class RaftClient implements NioCallerConsumer {
 
     }
 
+    public void close() throws Exception {
+        nioCaller.stop();
+    }
+
     public void send(int value) throws Exception {
 
         byte[] val = ByteBuffer.allocate(4).putInt(value).array() ;

@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class ClusterInfoMessageTest {
@@ -14,10 +16,10 @@ public class ClusterInfoMessageTest {
     @Test
     public void serialize() throws Exception {
 
-        ClusterInfo c = new ClusterInfo();
+
         Member m = new Member("192.168.5.1",5050, true);
-        c.addMember(m);
-        c.setLeader(m);
+        ClusterInfo c = new ClusterInfo(m, new ArrayList<Member>());
+
 
         c.addMember(new Member("192.168.5.2",5051, false));
         c.addMember(new Member("192.168.5.3",5052, false));
@@ -26,6 +28,8 @@ public class ClusterInfoMessageTest {
         ByteBuffer b = cm.serialize();
 
         ClusterInfoMessage cmCopy = ClusterInfoMessage.deserialize(b) ;
+
+        assertEquals(5050, cmCopy.getClusterInfo().getLeader().getPort());
 
         System.out.println("done");
     }

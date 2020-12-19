@@ -59,6 +59,10 @@ public class NioCaller {
 
     }
 
+    public void stop() throws Exception {
+        clientChannel.close();
+    }
+
     public Void call() {
 
         try {

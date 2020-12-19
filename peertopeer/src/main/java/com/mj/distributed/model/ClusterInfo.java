@@ -8,14 +8,15 @@ import java.util.List;
 
 public class ClusterInfo {
 
-    private Member leader ;
-    private List<Member> members = Collections.synchronizedList(new ArrayList<Member>());
+    private final Member leader ;
+    private final List<Member> members ;
 
-    public ClusterInfo() {}
+
 
     public ClusterInfo(Member leader, List<Member> ms) {
         this.leader = leader;
         this.members = ms ;
+        members.add(leader);
     }
 
     public void addMember(Member m) {
@@ -26,10 +27,6 @@ public class ClusterInfo {
         return leader;
     }
 
-    public void setLeader(Member m) {
-        leader = m;
-    }
-
     public List<Member> getMembers() {
         return members;
     }
@@ -37,6 +34,10 @@ public class ClusterInfo {
     public byte[] toBytes() throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(out);
+
+        byte[] leaderBytes = leader.toBytes();
+        d.writeInt(leaderBytes.length);
+        d.write(leaderBytes);
 
         d.writeInt(members.size());
 
@@ -55,7 +56,13 @@ public class ClusterInfo {
     public static ClusterInfo fromBytes(byte[] bytes) throws IOException {
         ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
         DataInputStream din = new DataInputStream(bin);
-        ClusterInfo cinfo = new ClusterInfo();
+
+        int numleaderBytes = din.readInt();
+        byte[] leaderbytes = new byte[numleaderBytes];
+        din.read(leaderbytes, 0, numleaderBytes);
+        Member leader = Member.fromBytes(leaderbytes);
+
+        ClusterInfo cinfo = new ClusterInfo(leader, new ArrayList<Member>());
 
         int numMembers = din.readInt() ;
 
@@ -66,9 +73,10 @@ public class ClusterInfo {
             din.read(mbytes, 0, numbytes);
             Member m = Member.fromBytes(mbytes);
             cinfo.addMember(m);
-            if (m.isLeader()) {
+
+            /* if (m.isLeader()) {
                 cinfo.setLeader(m);
-            }
+            } */
 
 
         }

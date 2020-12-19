@@ -23,7 +23,7 @@ public class TestClient implements NioCallerConsumer {
     private final AtomicInteger seq = new AtomicInteger(1);
     // private Map<Integer, Message> responseSet = new ConcurrentHashMap<>();
     private Integer messageWaitingResponse ;
-    private Message response;
+    private volatile Message response;
     Logger LOG = LoggerFactory.getLogger(TestClient.class);
 
     public TestClient(String host, int port) {
@@ -39,6 +39,10 @@ public class TestClient implements NioCallerConsumer {
         TestClientHello hello = new TestClientHello();
         nioCaller.queueSendMessage(hello.serialize());
 
+    }
+
+    public void close() throws Exception {
+        nioCaller.stop();
     }
 
     /*
@@ -85,7 +89,9 @@ public class TestClient implements NioCallerConsumer {
             }
 
             ClusterInfoMessage r = (ClusterInfoMessage) response ;
-            return r.getClusterInfo();
+            ClusterInfo ret = r.getClusterInfo() ;
+            response = null ;
+            return ret;
         }
 
     }
@@ -112,10 +118,12 @@ public class TestClient implements NioCallerConsumer {
 
                 if (messageType == MessageType.GetServerLogResponse.value()) {
                     response = GetServerLogResponse.deserialize(b.rewind());
+                    messageWaitingResponse.notify();
                 } else if (messageType == MessageType.ClusterInfo.value()) {
                     response = ClusterInfoMessage.deserialize(b.rewind());
+                    messageWaitingResponse.notify();
                 }
-                messageWaitingResponse.notifyAll();
+
 
             }
         } catch(Exception e) {

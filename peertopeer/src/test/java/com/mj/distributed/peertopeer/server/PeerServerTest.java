@@ -6,6 +6,7 @@ import com.mj.distributed.model.RaftState;
 import com.mj.raft.client.RaftClient;
 import com.mj.raft.test.client.TestClient;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -41,6 +42,13 @@ public class PeerServerTest {
 
         Thread.sleep(15000);
 
+    }
+
+    @AfterAll
+    public static void destroy() throws Exception {
+        leader.stop();
+        server1.stop();
+        server2.stop();
     }
 
     @Test
