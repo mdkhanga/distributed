@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class LeaderElectionTest {
@@ -73,7 +74,6 @@ public class LeaderElectionTest {
         assertEquals(cs1.getLeader().getHostString(),"localhost");
 
 
-
         TestClient ts2 = new TestClient("localhost",6003);
         ts2.connect();
         cs1 = ts2.getClusterInfo() ;
@@ -86,12 +86,40 @@ public class LeaderElectionTest {
 
         // check for new leader
         cs1 = ts2.getClusterInfo() ;
-        assertEquals(cs1.getLeader().getPort(),6002);
-        assertEquals(cs1.getLeader().getHostString(),"localhost");
+        int port = cs1.getLeader().getPort();
+        System.out.println("mj leader is "+ cs1.getLeader().getHostString() +":"+ port);
+
+        if (port == 6001) {
+            assertTrue(false);
+        }
+
+
+        ClusterInfo cs2 = ts.getClusterInfo();
+        System.out.println("mj leader is "+cs2.getLeader().getHostString() +":"+ cs2.getLeader().getPort());
+        assertEquals(cs1.getLeader().getPort(),cs2.getLeader().getPort());
+        assertEquals(cs1.getLeader().getHostString(),cs2.getLeader().getHostString());
+
+        // repeat
+        Thread.sleep(5000) ;
+
+        cs1 = ts2.getClusterInfo() ;
+        port = cs1.getLeader().getPort();
+        System.out.println("mj leader is "+ cs1.getLeader().getHostString() +":"+ port);
+
+        if (port == 6001) {
+            assertTrue(false);
+        }
+
+
+        cs2 = ts.getClusterInfo();
+        System.out.println("mj leader is "+cs2.getLeader().getHostString() +":"+ cs2.getLeader().getPort());
+        assertEquals(cs1.getLeader().getPort(),cs2.getLeader().getPort());
+        assertEquals(cs1.getLeader().getHostString(),cs2.getLeader().getHostString());
+
+
+
         ts.close();
         ts2.close();
-
-
 
     }
 

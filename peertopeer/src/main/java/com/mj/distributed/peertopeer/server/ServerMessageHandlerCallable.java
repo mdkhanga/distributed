@@ -79,7 +79,9 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 RequestVoteMessage message = RequestVoteMessage.deserialize(readBuffer.rewind());
 
+                peerServer.setElectionInProgress(message.getTerm());
                 LOG.info("Received a request vote message from "+ message.getCandidateHost() + ":" + message.getCandidatePort());
+
 
                 RequestVoteResponseMessage requestVoteResponseMessage = new RequestVoteResponseMessage(
                         message.getTerm(),
@@ -92,6 +94,17 @@ public class ServerMessageHandlerCallable implements Callable {
             } else if (messageType == MessageType.AppendEntries.value()) {
                 AppendEntriesMessage message = AppendEntriesMessage.deserialize(readBuffer.rewind());
                 PeerData d = peerServer.getPeerData(socketChannel);
+
+                if ( message.getLeaderId() != peerServer.getLeaderId() ||
+                        message.getTerm() != peerServer.getTerm()) {
+                    LOG.info("We have a new leader :" + message.getLeaderId());
+                    peerServer.setLeaderId(message.getLeaderId());
+                    peerServer.currentTerm.set(message.getTerm());
+                    if (peerServer.isElectionInProgress()) {
+                        peerServer.clearElectionInProgress();
+                    }
+                }
+
 
                 // LOG.info("Got append entries message "+ message.getLeaderId() + " " + d.getHostString() + " " + d.getPort());
                 peerServer.setLastLeaderHeartBeatTs(System.currentTimeMillis());

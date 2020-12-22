@@ -72,6 +72,10 @@ public class PeerServer implements NioListenerConsumer {
     Thread writerThread;
     private volatile boolean stop = false ;
 
+    private volatile int leaderId = -1;
+    private volatile boolean electionInProgress = false ;
+    private volatile int currentElectionTerm = -1 ;
+
     public PeerServer(int id, RaftState state) {
 
         serverId = new AtomicInteger(id) ;
@@ -153,6 +157,14 @@ public class PeerServer implements NioListenerConsumer {
         return currentTerm.get();
     }
 
+    public int getLeaderId() {
+        return leaderId;
+    }
+
+    public void setLeaderId(int s) {
+        leaderId = s ;
+    }
+
     public int incrementTerm() {
         return currentTerm.incrementAndGet();
     }
@@ -183,6 +195,20 @@ public class PeerServer implements NioListenerConsumer {
 
     public void setClusterInfo(ClusterInfo c) {
         clusterInfo = c ;
+    }
+
+    public void setElectionInProgress(int term) {
+        electionInProgress = true;
+        currentElectionTerm = term ;
+    }
+
+    public void clearElectionInProgress() {
+        electionInProgress = false;
+        currentElectionTerm = -1;
+    }
+
+    public boolean isElectionInProgress() {
+        return electionInProgress;
     }
 
     public void queueSendMessage(SocketChannel c, Message m) throws Exception {
@@ -435,7 +461,7 @@ public class PeerServer implements NioListenerConsumer {
         Member m = peer.member();
         PeerData v = memberPeerDataMap.get(m);
 
-        AppendEntriesMessage p = new AppendEntriesMessage(serverId.get(),
+        AppendEntriesMessage p = new AppendEntriesMessage(getTerm(),serverId.get(),
                 v.getNextSeq(),
                 rlog.size()-1,
                 lastComittedIndex.get());

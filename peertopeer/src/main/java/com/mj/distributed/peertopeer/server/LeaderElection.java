@@ -22,10 +22,19 @@ public class LeaderElection implements Runnable {
 
     public void run()  {
 
+        if (server.isElectionInProgress()) {
+            LOG.info("Election already in progress") ;
+            return;
+        }
+
         // start election timer
         electionStartTime = System.currentTimeMillis() ;
 
         LOG.info("Started leader election at "+ electionStartTime);
+
+        int newterm = server.incrementTerm();
+
+        server.setElectionInProgress(newterm);
 
         // get the list of available servers
         List<Member> members = server.getClusterInfo().getMembers() ;
@@ -58,7 +67,7 @@ public class LeaderElection implements Runnable {
                     pc.queueSendMessage(hm.serialize());
 
                     RequestVoteMessage rv = new RequestVoteMessage(
-                            server.incrementTerm(),
+                            newterm,
                             server.getServerId(),
                             server.getBindHost(),
                             server.getBindPort(),

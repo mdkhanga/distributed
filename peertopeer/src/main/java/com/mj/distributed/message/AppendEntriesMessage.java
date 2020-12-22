@@ -33,8 +33,9 @@ public class AppendEntriesMessage implements Message {
         this.seqId = seqId;
     }
 
-    public AppendEntriesMessage(int leaderId, int seqId, int prevIndex, int leaderCommitIndex) {
+    public AppendEntriesMessage(int term, int leaderId, int seqId, int prevIndex, int leaderCommitIndex) {
 
+        this.term = term;
         this.leaderId = leaderId;
         this.seqId = seqId;
         this.prevIndex = prevIndex;
@@ -51,6 +52,10 @@ public class AppendEntriesMessage implements Message {
 
     public LogEntry getLogEntry() {
         return entries.size() == 1 ? entries.get(0) : null;
+    }
+
+    public int getTerm() {
+        return term;
     }
 
     public int getLeaderId() {
@@ -79,6 +84,7 @@ public class AppendEntriesMessage implements Message {
         DataOutputStream d = new DataOutputStream(b);
 
         d.writeInt(messageType.value());
+        d.writeInt(term);
         d.writeInt(leaderId);
         d.writeInt(seqId);
         d.writeInt(prevIndex);
@@ -117,12 +123,13 @@ public class AppendEntriesMessage implements Message {
             throw new RuntimeException("Message is not the expected type AppendEntriesMessage") ;
         }
 
+        int term = b.getInt();
         int leaderId = b.getInt();
         int seqId = b.getInt();
         int prevIndex = b.getInt();
         int leaderCommitIndex = b.getInt();
 
-        AppendEntriesMessage newMsg = new AppendEntriesMessage(leaderId, seqId, prevIndex, leaderCommitIndex);
+        AppendEntriesMessage newMsg = new AppendEntriesMessage(term, leaderId, seqId, prevIndex, leaderCommitIndex);
 
         int numEntries = b.getInt() ;
        while (numEntries > 0) {
