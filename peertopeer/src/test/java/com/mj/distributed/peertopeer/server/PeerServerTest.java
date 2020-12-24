@@ -104,7 +104,7 @@ public class PeerServerTest {
 
         TestClient ts2 = new TestClient("localhost",5003);
         ts2.connect();
-        cs1 = ts.getClusterInfo() ;
+        cs1 = ts2.getClusterInfo() ;
         assertEquals(cs1.getLeader().getPort(),5001);
         assertEquals(cs1.getLeader().getHostString(),"localhost");
 

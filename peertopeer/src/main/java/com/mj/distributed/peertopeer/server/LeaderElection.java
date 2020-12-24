@@ -4,27 +4,45 @@ import com.mj.distributed.message.HelloMessage;
 import com.mj.distributed.message.RequestVoteMessage;
 import com.mj.distributed.message.RequestVoteResponseMessage;
 import com.mj.distributed.model.Member;
+import com.mj.distributed.model.RaftState;
+import com.mj.distributed.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LeaderElection implements Runnable {
 
-    PeerServer server;
+    private PeerServer server;
 
-    long electionStartTime ;
-    Logger LOG = LoggerFactory.getLogger(LeaderElection.class);
+    private long electionStartTime ;
+    private Logger LOG = LoggerFactory.getLogger(LeaderElection.class);
+    private int requiredVotes ;
+    private volatile AtomicInteger noVotes = new AtomicInteger(0);
+    volatile AtomicInteger currentVoteCount = new AtomicInteger(1);
+    private int newterm ;
+
+
+    private volatile boolean stop = false;
+
     LeaderElection(PeerServer p) {
         server = p ;
+        int numServers = p.getClusterInfo().getMembers().size() - 1;
+        requiredVotes = Utils.majority(numServers) ;
     }
+
+    public static int ELECTION_TIMEOUT = 5000; // ms
 
     public void run()  {
 
         if (server.isElectionInProgress()) {
             LOG.info("Election already in progress") ;
             return;
+        } else {
+            newterm = server.getNextElectionTerm();
+            server.setElectionInProgress(newterm);
         }
 
         // start election timer
@@ -32,18 +50,13 @@ public class LeaderElection implements Runnable {
 
         LOG.info("Started leader election at "+ electionStartTime);
 
-        int newterm = server.incrementTerm();
-
-        server.setElectionInProgress(newterm);
 
         // get the list of available servers
-        List<Member> members = server.getClusterInfo().getMembers() ;
+        List<Member> members = server.getClusterInfo().getMembers();
 
         synchronized (members) {
             members.forEach((m) -> {
-
                 try {
-
 
                     if (m.isLeader()) {
                         LOG.info("skipping "+m.getHostString() + ":" + m.getPort()) ;
@@ -55,9 +68,9 @@ public class LeaderElection implements Runnable {
                         return ;
                     }
 
-                    if (m.getPort() == 5002) {
+                    /* if (m.getPort() == 5002) {
                         return ;
-                    }
+                    } */
 
                     LOG.info("Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
                     PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
@@ -80,11 +93,43 @@ public class LeaderElection implements Runnable {
             });
         }
 
+        while(!stop) {
 
-        // start/get peerclients for each if necessary and connect
+            // LOG.info(server.getServerId() + ": election thread :" +newterm + "vote count =" +currentVoteCount.get()
+               //     +": required = "+requiredVotes );
 
-        // send request vote message to each
+            if (currentVoteCount.get() >= requiredVotes) {
 
+                LOG.info(server.getServerId()+":Won Election for term " + newterm) ;
+                server.setRaftState(RaftState.leader);
+                server.setTerm(newterm);
+                server.clearElectionInProgress();
+                break;
+            }
+
+            if (noVotes.get() >= requiredVotes) {
+                server.clearElectionInProgress();
+                server.setRaftState(RaftState.follower);
+                LOG.info(server.getServerId()+":Election vote NO  for term " + newterm) ;
+                break;
+            }
+
+            long currentTime = System.currentTimeMillis() ;
+            if (currentTime - electionStartTime > ELECTION_TIMEOUT) {
+                server.clearElectionInProgress();
+                server.setRaftState(RaftState.follower);
+                LOG.info(server.getServerId()+":Election timed out for term " + newterm) ;
+                break ;
+            }
+
+            try {
+                Thread.sleep(200);
+            } catch(Exception e) {
+                LOG.error("Error woken from sleep",e);
+            }
+        }
+
+        LOG.info("Election over for term " + newterm) ;
         // while( election not timed out && some else did not become leader)
 
             // if (checkVoteCount > majority)
@@ -98,6 +143,20 @@ public class LeaderElection implements Runnable {
 
 
 
+    }
+
+    public void stop() {
+        stop = true ;
+    }
+
+    public int vote(boolean v) {
+
+        if (v) {
+            return currentVoteCount.incrementAndGet();
+        } else {
+            noVotes.incrementAndGet();
+            return currentVoteCount.get() ;
+        }
     }
 
     public void requestVote(RequestVoteMessage message) {
@@ -125,5 +184,7 @@ public class LeaderElection implements Runnable {
         // if term == election term and votedforId = this
         // increment vote count
     }
+
+
 
 }

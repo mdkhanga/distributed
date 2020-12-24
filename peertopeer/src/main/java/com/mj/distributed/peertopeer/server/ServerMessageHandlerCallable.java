@@ -43,14 +43,14 @@ public class ServerMessageHandlerCallable implements Callable {
 
             if (messageType == MessageType.Hello.value()) {
 
-                LOG.info("Received a hello message");
+                LOG.info(peerServer.getServerId()+ ":Received a hello message");
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
                 peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
-                LOG.info("Registered peer " + message.getHostString() + ":" + message.getHostPort());
+                LOG.info(peerServer.getServerId()+"Registered peer " + message.getHostString() + ":" + message.getHostPort());
 
             } else if(messageType == MessageType.TestClientHello.value()) {
 
-                LOG.info("Received a TestClient hello message");
+                LOG.info(peerServer.getServerId()+":Received a TestClient hello message");
                 peerServer.addRaftClient(socketChannel);
 
             } else if (messageType == MessageType.Ack.value()) {
@@ -79,16 +79,36 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 RequestVoteMessage message = RequestVoteMessage.deserialize(readBuffer.rewind());
 
-                peerServer.setElectionInProgress(message.getTerm());
-                LOG.info("Received a request vote message from "+ message.getCandidateHost() + ":" + message.getCandidatePort());
+                LOG.info(peerServer.getServerId() + ":Received a request vote message from " + message.getCandidateHost() + ":"
+                        + message.getCandidatePort() + " for term: "+message.getTerm());
 
+                int requestVoteTerm = message.getTerm() ;
 
+                boolean vote ;
+
+                /* if (peerServer.isElectionInProgress() && requestVoteTerm <= peerServer.getCurrentElectionTerm()) {
+                    vote = false ;
+                    LOG.info(peerServer.getServerId() + ": voted No because term < current " +
+                            "election term "+peerServer.getCurrentElectionTerm());
+                }
+                else */ if (requestVoteTerm <= peerServer.getTerm()) {
+                    vote = false;
+                    LOG.info(peerServer.getServerId() + ": voted No because term < current term "+peerServer.getTerm());
+                }
+                else if (requestVoteTerm <= peerServer.getCurrentVotedTerm()) {
+                    vote = false ;
+                    LOG.info(peerServer.getServerId() + ": voted No because term < voted term "+peerServer.getCurrentVotedTerm());
+                } else {
+
+                    peerServer.setCurrentVotedTerm(message.getTerm());
+                    LOG.info(peerServer.getServerId() + ": voted Yes");
+                    vote = true ;
+                }
                 RequestVoteResponseMessage requestVoteResponseMessage = new RequestVoteResponseMessage(
                         message.getTerm(),
                         message.getCandidateId(),
-                        true);
+                        vote);
 
-                LOG.info("Queueing response");
                 peerServer.queueSendMessage(socketChannel, requestVoteResponseMessage);
 
             } else if (messageType == MessageType.AppendEntries.value()) {
@@ -97,7 +117,7 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 if ( message.getLeaderId() != peerServer.getLeaderId() ||
                         message.getTerm() != peerServer.getTerm()) {
-                    LOG.info("We have a new leader :" + message.getLeaderId());
+                    LOG.info(peerServer.getServerId()+ ":We have a new leader :" + message.getLeaderId());
                     peerServer.setLeaderId(message.getLeaderId());
                     peerServer.currentTerm.set(message.getTerm());
                     if (peerServer.isElectionInProgress()) {
@@ -117,33 +137,35 @@ public class ServerMessageHandlerCallable implements Callable {
             }  else if (messageType == MessageType.ClusterInfo.value()) {
 
                 ClusterInfoMessage message = ClusterInfoMessage.deserialize(readBuffer.rewind()) ;
-                LOG.info("Received clusterInfoMsg:" + message.toString());
+                LOG.info(peerServer.getServerId()+":Received clusterInfoMsg:" + message.toString());
                 peerServer.setClusterInfo(message.getClusterInfo());
             } else if (messageType == MessageType.RequestVoteResponse.value()) {
 
-                LOG.info("Received RequestVoteResponse Message") ;
+                LOG.info(peerServer.getServerId()+":Received RequestVoteResponse Message") ;
                 RequestVoteResponseMessage message = RequestVoteResponseMessage.deserialize(readBuffer.rewind());
 
+                int votes = 0;
                 if (message.getVote()) {
-                    LOG.info("Got vote. Won the election") ;
-                    peerServer.setRaftState(RaftState.leader);
+                    votes = peerServer.vote(true);
+                    LOG.info(peerServer.getServerId()+":Got vote. updated vote count = " +votes) ;
                 } else {
-                    LOG.info("Did not get vote. Lost the election");
+                    votes = peerServer.vote(false);
+                    LOG.info(peerServer.getServerId()+":Did not get vote. current vote count="+votes);
                 }
 
             } else if (messageType == MessageType.RaftClientHello.value()) {
 
-                LOG.info("Received a RaftClientHello message") ;
+                LOG.info(peerServer.getServerId()+":Received a RaftClientHello message") ;
 
             } else if (messageType == MessageType.RaftClientAppendEntry.value()) {
 
-                LOG.info("Received a RaftClientAppendEntry message");
+                LOG.info(peerServer.getServerId()+":Received a RaftClientAppendEntry message");
                 RaftClientAppendEntry message = RaftClientAppendEntry.deserialize(readBuffer.rewind());
                 peerServer.addLogEntry(message.getValue());
 
             } else if (messageType == MessageType.GetServerLog.value()) {
 
-                LOG.info("Received a GetServerLog message");
+                LOG.info(peerServer.getServerId()+":Received a GetServerLog message");
 
                 GetServerLog message = GetServerLog.deserialize(readBuffer.rewind());
 
@@ -151,12 +173,12 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 GetServerLogResponse response = new GetServerLogResponse(message.getSeqId(), ret);
 
-                LOG.info("Sending a GetServerLog response message");
+                LOG.info(peerServer.getServerId()+":Sending a GetServerLog response message");
                 peerServer.queueSendMessage(socketChannel, response);
             } else if (messageType == MessageType.GetClusterInfo.value()) {
-                LOG.info("Received request for clusterInfo");
+                LOG.info(peerServer.getServerId()+":Received request for clusterInfo");
                 ClusterInfoMessage cm = new ClusterInfoMessage(peerServer.getClusterInfo());
-                LOG.info("cm message size = "+cm.serialize().limit());
+                LOG.info(peerServer.getServerId()+":cm message size = "+cm.serialize().limit());
                 peerServer.queueSendMessage(socketChannel, cm);
 
             }

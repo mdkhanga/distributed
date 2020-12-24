@@ -59,11 +59,11 @@ public class PeerServer implements NioListenerConsumer {
     volatile ConcurrentHashMap<Integer,ConcurrentLinkedQueue<Integer>> ackCountMap =
             new ConcurrentHashMap<>(); // key = index, value = queue of commit responses
 
-    AtomicInteger currentTerm = new AtomicInteger(0);
+    volatile AtomicInteger currentTerm = new AtomicInteger(0);
 
-    Long lastLeaderHeartBeatTs = 0L ;
+    volatile Long lastLeaderHeartBeatTs = 0L ;
 
-    volatile boolean leaderElection = false ;
+    // volatile boolean leaderElection = false ;
 
     volatile RaftState raftState = RaftState.follower ;
 
@@ -75,6 +75,10 @@ public class PeerServer implements NioListenerConsumer {
     private volatile int leaderId = -1;
     private volatile boolean electionInProgress = false ;
     private volatile int currentElectionTerm = -1 ;
+    private volatile LeaderElection leaderElection ;
+
+    private volatile int currentVotedTerm = -1;
+    private volatile long currentVoteTimeStamp = 0;
 
     public PeerServer(int id, RaftState state) {
 
@@ -156,6 +160,9 @@ public class PeerServer implements NioListenerConsumer {
     public int getTerm() {
         return currentTerm.get();
     }
+    public void setTerm(int t) {
+        currentTerm.set(t);
+    }
 
     public int getLeaderId() {
         return leaderId;
@@ -165,12 +172,38 @@ public class PeerServer implements NioListenerConsumer {
         leaderId = s ;
     }
 
-    public int incrementTerm() {
-        return currentTerm.incrementAndGet();
+
+    public void setCurrentVotedTerm(int term) {
+        currentVotedTerm = term;
+        currentVoteTimeStamp = System.currentTimeMillis();
+    }
+
+    public int getCurrentVotedTerm() {
+        return currentVotedTerm;
+    }
+
+    public int getNextElectionTerm() {
+
+        if (currentTerm.get() >= currentElectionTerm) {
+            return currentTerm.get() + 1;
+        } else {
+            return currentElectionTerm + 1;
+        }
     }
 
     public int getServerId() {
         return serverId.get();
+    }
+
+    public List<Member> getMembers() {
+
+        List<Member> members = new ArrayList<>();
+
+        connectedMembersMap.forEach((k,v)->{
+            members.add(k);
+        });
+
+        return members;
     }
 
     public LogEntry getLastCommittedEntry() {
@@ -181,13 +214,13 @@ public class PeerServer implements NioListenerConsumer {
         }
     }
 
-    public boolean isLeaderElection() {
+    /* public boolean isLeaderElection() {
         return leaderElection;
     }
 
     public void setLeaderElection(boolean s) {
         leaderElection = true ;
-    }
+    } */
 
     public ClusterInfo getClusterInfo() {
             return clusterInfo ;
@@ -204,7 +237,15 @@ public class PeerServer implements NioListenerConsumer {
 
     public void clearElectionInProgress() {
         electionInProgress = false;
-        currentElectionTerm = -1;
+        leaderElection.stop() ;
+    }
+
+    public int getCurrentElectionTerm() {
+        return currentElectionTerm;
+    }
+
+    public int vote(boolean vote) {
+        return leaderElection.vote(vote) ;
     }
 
     public boolean isElectionInProgress() {
@@ -420,13 +461,23 @@ public class PeerServer implements NioListenerConsumer {
 
                         // test
                         // LOG.info("We need a leader Election. No heartBeat in ") ;
-                        if (!peerServer.isLeaderElection()) {
-                            LOG.info("Starting a leader election ") ;
-                            peerServer.setLeaderElection(true);
+                        if (!peerServer.isElectionInProgress()) {
 
-                            LOG.info("Starting leader election");
-                            LeaderElection leaderElection = new LeaderElection(peerServer);
-                            peerServerExecutor.submit(leaderElection);
+                            // peerServer.setElectionInProgress(incrementTerm());
+
+                            int randomDelay = (int)(900 + Math.random()*200*serverId.get());
+
+                            long timeSinceLastLeadetBeat = System.currentTimeMillis() -
+                                    peerServer.getlastLeaderHeartBeatts();
+                            if ((peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > randomDelay)
+                                    &&
+                                    (System.currentTimeMillis() - currentVoteTimeStamp > LeaderElection.ELECTION_TIMEOUT)) {
+
+
+                                LOG.info(serverId + ": Starting leader election");
+                                leaderElection = new LeaderElection(peerServer);
+                                peerServerExecutor.submit(leaderElection);
+                            }
 
                         }
 
@@ -434,11 +485,14 @@ public class PeerServer implements NioListenerConsumer {
 
                     } else if (raftState.equals(RaftState.follower)) {
 
+                        int randomDelay = (int)(900 + Math.random()*200*serverId.get());
 
                         long timeSinceLastLeadetBeat = System.currentTimeMillis() -
                             peerServer.getlastLeaderHeartBeatts();
-                        if (peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > 1000) {
-                            LOG.info("We need a leader Election. No heartBeat in ") ;
+                        if ((peerServer.getlastLeaderHeartBeatts() > 0 && timeSinceLastLeadetBeat > randomDelay)
+                                &&
+                                (System.currentTimeMillis() - currentVoteTimeStamp > LeaderElection.ELECTION_TIMEOUT)) {
+                            LOG.info(serverId+ ":We need a leader Election. No heartBeat in ") ;
                             raftState = RaftState.candidate;
                         }
 
