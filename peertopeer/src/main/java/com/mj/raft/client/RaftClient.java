@@ -66,7 +66,7 @@ public class RaftClient implements NioCallerConsumer {
 
     public static void main(String[] args) throws Exception {
 
-        RaftClient client = new RaftClient("localhost",5002);
+        RaftClient client = new RaftClient("localhost",5001);
         client.connect();
         client.send(23);
 

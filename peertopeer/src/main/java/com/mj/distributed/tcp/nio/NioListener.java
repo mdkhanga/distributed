@@ -55,9 +55,10 @@ public class NioListener {
 
     public void stop() throws Exception {
         stop = true ;
+        LOG.info(bindHost+":"+bindPort + " is stopping") ;
         serverSocketChannel.socket().close();
         serverSocketChannel.close();
-
+        serverSocketChannel = null;
     }
 
     public Void call() {

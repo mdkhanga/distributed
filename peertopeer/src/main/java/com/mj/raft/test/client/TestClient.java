@@ -37,7 +37,23 @@ public class TestClient implements NioCallerConsumer {
         nioCaller = new NioCaller(hostString, port, this);
         nioCaller.start();
         TestClientHello hello = new TestClientHello();
+        messageWaitingResponse = 0 ;
         nioCaller.queueSendMessage(hello.serialize());
+
+        synchronized (messageWaitingResponse) {
+
+                while(response == null ) {
+
+                    messageWaitingResponse.wait();
+
+                }
+
+                TestClientHelloResponse r = (TestClientHelloResponse) response ;
+                response = null ;
+        }
+
+
+
 
     }
 
@@ -116,14 +132,16 @@ public class TestClient implements NioCallerConsumer {
                 int messageSize = b.getInt();
                 int messageType = b.getInt() ;
 
-                if (messageType == MessageType.GetServerLogResponse.value()) {
+                if (messageType == MessageType.TestClientHelloResponse.value()) {
+                    response = TestClientHelloResponse.deserialize(b.rewind());
+                    messageWaitingResponse.notify();
+                } else if (messageType == MessageType.GetServerLogResponse.value()) {
                     response = GetServerLogResponse.deserialize(b.rewind());
                     messageWaitingResponse.notify();
                 } else if (messageType == MessageType.ClusterInfo.value()) {
                     response = ClusterInfoMessage.deserialize(b.rewind());
                     messageWaitingResponse.notify();
                 }
-
 
             }
         } catch(Exception e) {

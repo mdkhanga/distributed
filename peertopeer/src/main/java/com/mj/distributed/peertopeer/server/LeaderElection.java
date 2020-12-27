@@ -9,7 +9,6 @@ import com.mj.distributed.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,14 +22,16 @@ public class LeaderElection implements Runnable {
     private volatile AtomicInteger noVotes = new AtomicInteger(0);
     volatile AtomicInteger currentVoteCount = new AtomicInteger(1);
     private int newterm ;
+    private List<Member> members;
 
 
     private volatile boolean stop = false;
 
     LeaderElection(PeerServer p) {
         server = p ;
-        int numServers = p.getClusterInfo().getMembers().size() - 1;
-        requiredVotes = Utils.majority(numServers) ;
+        // int numServers = p.getClusterInfo().getMembers().size() - 1;
+        members = p.getMembers();
+        requiredVotes = Utils.majority(members.size()) ;
     }
 
     public static int ELECTION_TIMEOUT = 5000; // ms
@@ -38,7 +39,7 @@ public class LeaderElection implements Runnable {
     public void run()  {
 
         if (server.isElectionInProgress()) {
-            LOG.info("Election already in progress") ;
+            LOG.info(server.getServerId()+ ":Election already in progress") ;
             return;
         } else {
             newterm = server.getNextElectionTerm();
@@ -48,23 +49,23 @@ public class LeaderElection implements Runnable {
         // start election timer
         electionStartTime = System.currentTimeMillis() ;
 
-        LOG.info("Started leader election at "+ electionStartTime);
+        LOG.info(server.getServerId()+ ":Started leader election at "+ electionStartTime + " for term "+ newterm);
 
 
         // get the list of available servers
-        List<Member> members = server.getClusterInfo().getMembers();
+        // List<Member> members = server.getClusterInfo().getMembers();
 
         synchronized (members) {
             members.forEach((m) -> {
                 try {
 
                     if (m.isLeader()) {
-                        LOG.info("skipping "+m.getHostString() + ":" + m.getPort()) ;
+                        LOG.info(server.getServerId() +":skipping "+m.getHostString() + ":" + m.getPort()) ;
                         return ;
                     }
 
                     if (m.getHostString().equals(server.getBindHost()) && m.getPort() == server.getBindPort()) {
-                        LOG.info("skipping self") ;
+                        LOG.info(server.getServerId() + ":skipping self") ;
                         return ;
                     }
 
@@ -72,7 +73,7 @@ public class LeaderElection implements Runnable {
                         return ;
                     } */
 
-                    LOG.info("Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
+                    LOG.info(server.getServerId() +":Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
                     PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
                     pc.start();
 

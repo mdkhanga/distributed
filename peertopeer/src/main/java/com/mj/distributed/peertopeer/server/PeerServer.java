@@ -32,9 +32,9 @@ public class PeerServer implements NioListenerConsumer {
     // reverse index
     private final ConcurrentMap<SocketChannel, Peer> socketChannelPeerMap = new ConcurrentHashMap<>() ;
 
-   // private ConcurrentSkipListSet<String> members = new ConcurrentSkipListSet<>() ;
-
-    private volatile ClusterInfo clusterInfo ;
+    private Set<Member> members = new HashSet<>() ;
+    private volatile Member leader ;
+    // private volatile ClusterInfo clusterInfo ;
 
     Integer x = 0 ;
 
@@ -107,12 +107,14 @@ public class PeerServer implements NioListenerConsumer {
 
 
         thisMember = new Member(bindHost, bindPort, true) ;
-        if (raftState.equals(RaftState.leader)) {
 
+        /* if (raftState.equals(RaftState.leader)) {
             // initiate connect to peers
             clusterInfo = new ClusterInfo(thisMember, new ArrayList<Member>());
 
-        }
+        } */
+        leader = thisMember;
+        members.add(thisMember);
 
 
         if (seed != null) {
@@ -145,6 +147,7 @@ public class PeerServer implements NioListenerConsumer {
 
     public void stop() throws Exception {
 
+        LOG.info(serverId + ": is stopping") ;
         stop = true;
         listener.stop();
     }
@@ -197,13 +200,13 @@ public class PeerServer implements NioListenerConsumer {
 
     public List<Member> getMembers() {
 
-        List<Member> members = new ArrayList<>();
+        List<Member> m = new ArrayList<>();
 
-        connectedMembersMap.forEach((k,v)->{
-            members.add(k);
+        members.forEach((k)->{
+            m.add(k);
         });
 
-        return members;
+        return m;
     }
 
     public LogEntry getLastCommittedEntry() {
@@ -214,20 +217,20 @@ public class PeerServer implements NioListenerConsumer {
         }
     }
 
-    /* public boolean isLeaderElection() {
-        return leaderElection;
-    }
-
-    public void setLeaderElection(boolean s) {
-        leaderElection = true ;
-    } */
 
     public ClusterInfo getClusterInfo() {
-            return clusterInfo ;
+            ClusterInfo info ;
+            synchronized (members) {
+                info = new ClusterInfo(leader, new ArrayList<>(members));
+            }
+            return info;
     }
 
     public void setClusterInfo(ClusterInfo c) {
-        clusterInfo = c ;
+        synchronized (members) {
+            members.addAll(c.getMembers());
+            leader = c.getLeader();
+        }
     }
 
     public void setElectionInProgress(int term) {
@@ -271,12 +274,13 @@ public class PeerServer implements NioListenerConsumer {
     public void setRaftState(RaftState state) {
         raftState = state ;
         if (state == RaftState.leader) {
-            // clusterInfo.setLeader(thisMember);
-            ClusterInfo newClusterInfo = new ClusterInfo(thisMember, new ArrayList<>(clusterInfo.getMembers()));
-            clusterInfo = newClusterInfo;
+            leader = thisMember;
         }
     }
 
+    public RaftState getRaftState() {
+        return raftState;
+    }
 
     public InBoundMessageCreator getInBoundMessageCreator() {
         return inBoundMessageCreator;
@@ -378,6 +382,8 @@ public class PeerServer implements NioListenerConsumer {
 
     public void droppedConnection(SocketChannel s) {
 
+        LOG.info(serverId + ": connection dropped") ;
+
         removePeer(s);
 
     }
@@ -465,7 +471,8 @@ public class PeerServer implements NioListenerConsumer {
 
                             // peerServer.setElectionInProgress(incrementTerm());
 
-                            int randomDelay = (int)(900 + Math.random()*200*serverId.get());
+                            // int randomDelay = (int)(900 + Math.random()*200*serverId.get());
+                            int randomDelay = (int)(900 + 400*serverId.get());
 
                             long timeSinceLastLeadetBeat = System.currentTimeMillis() -
                                     peerServer.getlastLeaderHeartBeatts();
@@ -485,7 +492,8 @@ public class PeerServer implements NioListenerConsumer {
 
                     } else if (raftState.equals(RaftState.follower)) {
 
-                        int randomDelay = (int)(900 + Math.random()*200*serverId.get());
+                        // int randomDelay = (int)(900 + Math.random()*200*serverId.get());
+                        int randomDelay = (int)(900 + 400*serverId.get());
 
                         long timeSinceLastLeadetBeat = System.currentTimeMillis() -
                             peerServer.getlastLeaderHeartBeatts();
@@ -545,16 +553,24 @@ public class PeerServer implements NioListenerConsumer {
     // public void sendClusterInfoMessage(PeerData v) throws Exception {
     public void sendClusterInfoMessage(Peer peer) throws Exception {
 
-        if (clusterInfo.getLeader() != null) {
+        /* if (clusterInfo.getLeader() != null) {
             ClusterInfoMessage cm = new ClusterInfoMessage(clusterInfo);
             // v.addMessageForPeer(cm);
             peer.queueSendMessage(cm);
+        } */
+        ClusterInfo info;
+        synchronized (members) {
+            info = new ClusterInfo(leader, new ArrayList<>(members));
         }
+        ClusterInfoMessage cm = new ClusterInfoMessage(info);
+        peer.queueSendMessage(cm);
 
     }
 
 
     public void removePeer(SocketChannel sc) {
+
+        LOG.info(serverId + ": removed peer for dropped connection");
 
         Peer p = socketChannelPeerMap.get(sc) ;
 
@@ -567,12 +583,18 @@ public class PeerServer implements NioListenerConsumer {
         socketChannelPeerMap.remove(sc) ;
         connectedMembersMap.remove(m);
         memberPeerDataMap.remove(m);
-        clusterInfo.removeMember(m.getHostString(), m.getPort());
+        // clusterInfo.removeMember(m.getHostString(), m.getPort());
+        synchronized (members) {
+            members.remove(m);
+        }
 
     }
 
     public void addPeer(SocketChannel sc, Peer p) {
 
+        synchronized (members) {
+            members.add(p.member());
+        }
         socketChannelPeerMap.put(sc, p) ;
         connectedMembersMap.put(p.member(), p);
         memberPeerDataMap.put(p.member(), new PeerData(p.member().getHostString(), p.member().getPort()));
@@ -582,7 +604,11 @@ public class PeerServer implements NioListenerConsumer {
     public void addPeer(SocketChannel sc, String hostString, int port) {
         Member m = new Member(hostString, port, false);
         ListenerPeer l = new ListenerPeer(listener, m, sc) ;
-        clusterInfo.addMember(m);
+        // clusterInfo.addMember(m);
+        synchronized (members) {
+            members.add(m);
+        }
+
         connectedMembersMap.put(m, l) ;
         memberPeerDataMap.put(m, new PeerData(hostString, port));
         socketChannelPeerMap.put(sc, l);

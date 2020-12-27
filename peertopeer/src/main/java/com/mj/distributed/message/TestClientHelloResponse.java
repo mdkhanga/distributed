@@ -4,11 +4,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
-public class TestClientHello implements Message  {
+public class TestClientHelloResponse implements Message  {
 
-    private MessageType messageType = MessageType.TestClientHello;
+    private MessageType messageType = MessageType.TestClientHelloResponse;
 
-    public TestClientHello( ) {
+    public TestClientHelloResponse( ) {
 
     }
 
@@ -29,17 +29,17 @@ public class TestClientHello implements Message  {
         return retBuffer ;
     }
 
-    public static TestClientHello deserialize(ByteBuffer readBuffer) {
+    public static TestClientHelloResponse deserialize(ByteBuffer readBuffer) {
 
         int messagesize = readBuffer.getInt() ;
 
         int messageType = readBuffer.getInt() ;
-        if (messageType != MessageType.TestClientHello.value()) {
+        if (messageType != MessageType.TestClientHelloResponse.value()) {
 
-            throw new RuntimeException("Message is not the expected type TestClientHello") ;
+            throw new RuntimeException("Message is not the expected type TestClientHelloResponse") ;
         }
 
-        return new TestClientHello() ;
+        return new TestClientHelloResponse() ;
     }
 
 }

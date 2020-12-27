@@ -14,7 +14,8 @@ public enum MessageType {
     GetServerLog(12),
     GetServerLogResponse(13),
     TestClientHello(14),
-    GetClusterInfo(15);
+    GetClusterInfo(15),
+    TestClientHelloResponse(16);
 
     private int value ;
 

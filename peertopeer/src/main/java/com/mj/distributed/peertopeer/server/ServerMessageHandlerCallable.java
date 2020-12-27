@@ -52,6 +52,7 @@ public class ServerMessageHandlerCallable implements Callable {
 
                 LOG.info(peerServer.getServerId()+":Received a TestClient hello message");
                 peerServer.addRaftClient(socketChannel);
+                peerServer.queueSendMessage(socketChannel, new TestClientHelloResponse());
 
             } else if (messageType == MessageType.Ack.value()) {
 
@@ -94,6 +95,10 @@ public class ServerMessageHandlerCallable implements Callable {
                 else */ if (requestVoteTerm <= peerServer.getTerm()) {
                     vote = false;
                     LOG.info(peerServer.getServerId() + ": voted No because term < current term "+peerServer.getTerm());
+                } else if (peerServer.getRaftState() == RaftState.candidate &&
+                        requestVoteTerm <= peerServer.getTerm()+1 ) {
+                    vote = false;
+                    LOG.info(peerServer.getServerId() + ": voted No because we are candidate");
                 }
                 else if (requestVoteTerm <= peerServer.getCurrentVotedTerm()) {
                     vote = false ;

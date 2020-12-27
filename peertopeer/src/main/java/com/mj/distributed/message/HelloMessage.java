@@ -72,28 +72,28 @@ public class HelloMessage implements Message {
     public static HelloMessage deserialize(ByteBuffer readBuffer) {
 
         int messagesize = readBuffer.getInt() ;
-        LOG.info("Received message of size " + messagesize) ;
+        // LOG.info("Received message of size " + messagesize) ;
         int messageType = readBuffer.getInt() ;
         if (messageType != 1) {
 
             throw new RuntimeException("Message is not the expected type HelloMessage") ;
         }
 
-        LOG.info("Received a hello message") ;
+        // LOG.info("Received a hello message") ;
         int greetingSize = readBuffer.getInt() ;
         byte[] greetingBytes = new byte[greetingSize] ;
         readBuffer.get(greetingBytes,0,greetingSize) ;
-        LOG.info("text greeing "+new String(greetingBytes)) ;
+        // LOG.info("text greeing "+new String(greetingBytes)) ;
 
 
         int hostStringSize = readBuffer.getInt() ;
         byte[] hostStringBytes = new byte[hostStringSize] ;
         readBuffer.get(hostStringBytes,0,hostStringSize) ;
         String hostString = new String(hostStringBytes) ;
-        LOG.info("from host "+hostString) ;
+        // LOG.info("from host "+hostString) ;
 
         int port = readBuffer.getInt() ;
-        LOG.info("and port "+port) ;
+        // LOG.info("and port "+port) ;
 
         return new HelloMessage(hostString,port) ;
     }

@@ -86,6 +86,7 @@ public class PeerClient implements NioCallerConsumer {
     }
 
     public void droppedConnection(SocketChannel s) {
+        LOG.info(peerServer.getServerId()+ ": a connection dropped");
         peerServer.removePeer(s);
     }
 
