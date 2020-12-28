@@ -43,7 +43,7 @@ public class ServerMessageHandlerCallable implements Callable {
 
             if (messageType == MessageType.Hello.value()) {
 
-                LOG.info(peerServer.getServerId()+ ":Received a hello message");
+               // LOG.info(peerServer.getServerId()+ ":Received a hello message");
                 HelloMessage message = HelloMessage.deserialize(readBuffer.rewind());
                 peerServer.addPeer(socketChannel, message.getHostString(), message.getHostPort());
                 LOG.info(peerServer.getServerId()+"Registered peer " + message.getHostString() + ":" + message.getHostPort());

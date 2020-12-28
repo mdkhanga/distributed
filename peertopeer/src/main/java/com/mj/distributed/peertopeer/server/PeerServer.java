@@ -581,11 +581,13 @@ public class PeerServer implements NioListenerConsumer {
         }
 
         socketChannelPeerMap.remove(sc) ;
-        connectedMembersMap.remove(m);
-        memberPeerDataMap.remove(m);
-        // clusterInfo.removeMember(m.getHostString(), m.getPort());
-        synchronized (members) {
-            members.remove(m);
+
+        if (m != null) {
+            connectedMembersMap.remove(m);
+            memberPeerDataMap.remove(m);
+            synchronized (members) {
+                members.remove(m);
+            }
         }
 
     }
