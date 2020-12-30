@@ -74,11 +74,13 @@ public class LeaderElection implements Runnable {
                     } */
 
                     LOG.info(server.getServerId() +":Sending request vote message to "+m.getHostString()+":"+m.getPort()) ;
-                    PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
-                    pc.start();
 
+                    /* PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), server);
+                    pc.start();
                     HelloMessage hm = new HelloMessage(server.getBindHost(), server.getBindPort());
-                    pc.queueSendMessage(hm.serialize());
+                    pc.queueSendMessage(hm.serialize()); */
+
+                    Peer pc = server.getPeer(m);
 
                     RequestVoteMessage rv = new RequestVoteMessage(
                             newterm,
@@ -86,7 +88,8 @@ public class LeaderElection implements Runnable {
                             server.getBindHost(),
                             server.getBindPort(),
                             server.getLastCommittedEntry());
-                    pc.queueSendMessage(rv.serialize());
+                    // pc.queueSendMessage(rv.serialize());
+                    pc.queueSendMessage(rv);
                 } catch (Exception e) {
                     LOG.error("Error starting client in leader election", e);
                 }
@@ -101,7 +104,7 @@ public class LeaderElection implements Runnable {
 
             if (currentVoteCount.get() >= requiredVotes) {
 
-                LOG.info(server.getServerId()+":Won Election for term " + newterm) ;
+                LOG.info(server.getServerId()+":Won Election for term " + newterm + " with votes " + currentVoteCount.get()) ;
                 server.setRaftState(RaftState.leader);
                 server.setTerm(newterm);
                 server.clearElectionInProgress();

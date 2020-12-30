@@ -26,8 +26,6 @@ public class PeerServer implements NioListenerConsumer {
     private AtomicInteger serverId ;
 
 
-    // private volatile ConcurrentHashMap<SocketChannel,PeerData> channelPeerMap = new ConcurrentHashMap<>() ;
-
     private final ConcurrentMap<Member, Peer> connectedMembersMap = new ConcurrentHashMap<>() ;
     private volatile ConcurrentMap<Member, PeerData> memberPeerDataMap = new ConcurrentHashMap<>() ;
     // reverse index
@@ -633,6 +631,33 @@ public class PeerServer implements NioListenerConsumer {
         return memberPeerDataMap.get(p.member());
     }
 
+    public Peer getPeer(Member m) throws Exception {
+
+        Peer p = connectedMembersMap.get(m) ;
+        if (p != null) {
+            return p;
+        }
+        // fix race condition
+        // establish connection
+        PeerClient pc = new PeerClient(m.getHostString(), m.getPort(), this) ;
+        pc.start();
+
+        HelloMessage hm = new HelloMessage(bindHost, bindPort);
+        pc.queueSendMessage(hm.serialize());
+
+        p = connectedMembersMap.get(m) ;
+
+        if (p == null) {
+            throw new RuntimeException("Connection not established to "+
+                    m.getHostString() +":"+m.getPort() + " from " +bindHost+":"+bindPort );
+        }
+
+
+        return p;
+
+
+
+    }
 
     public void logRlog() throws Exception {
 

@@ -34,6 +34,10 @@ public class NioCaller {
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
+    private Boolean connected = Boolean.FALSE ;
+
+    private Object lock = new Object();
+
     public NioCaller(String remotehost,
                      int remoteport,
                      String localhost,
@@ -60,6 +64,13 @@ public class NioCaller {
             clientChannel.register(selector, SelectionKey.OP_CONNECT);
 
             executorThread.submit(this::call);
+
+            synchronized (lock) {
+                while(!connected) {
+                    lock.wait() ;
+                }
+            }
+
         } catch(Exception e) {
 
             LOG.error("Error starting NioCaller ",e) ;
@@ -68,6 +79,9 @@ public class NioCaller {
     }
 
     public void stop() throws Exception {
+        synchronized (lock) {
+            connected = Boolean.FALSE ;
+        }
         clientChannel.close();
     }
 
@@ -131,6 +145,10 @@ public class NioCaller {
 
         // peerServer.addPeer(clientChannel, new CallerPeer(new Member(remoteHost, remotePort), peerClient));
         nioCallerConsumer.addedConnection(clientChannel);
+        synchronized (lock) {
+            connected = Boolean.TRUE;
+            lock.notify() ;
+        }
         LOG.info("finished connection");
     }
 
