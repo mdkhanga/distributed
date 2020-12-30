@@ -59,7 +59,7 @@ public class HelloMessage implements Message {
         ByteBuffer retBuffer = ByteBuffer.allocate(helloMsgArray.length+4);//
 
         int l = helloMsgArray.length+4 ;
-        LOG.info("Hello msg length " + l);
+        // LOG.info("Hello msg length " + l);
 
         retBuffer.putInt(helloMsgArray.length);
         retBuffer.put(helloMsgArray);

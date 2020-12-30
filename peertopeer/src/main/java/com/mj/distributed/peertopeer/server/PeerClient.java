@@ -60,7 +60,9 @@ public class PeerClient implements NioCallerConsumer {
 
     public void start() throws Exception {
 
-        nioCaller = new NioCaller(remoteHost, remotePort, this);
+        nioCaller = new NioCaller(remoteHost, remotePort,
+                peerServer.getBindHost(),
+                peerServer.getBindPort(),this);
         nioCaller.start();
 
         // PeerClientStatusCallable peerClientStatusCallable = new PeerClientStatusCallable();

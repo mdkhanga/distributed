@@ -21,6 +21,8 @@ public class NioCaller {
 
     private String remoteHost;
     private int remotePort;
+    private String localhost;
+    private int localPort;
     private NioCallerConsumer nioCallerConsumer;
 
     private ExecutorService executorThread = Executors.newFixedThreadPool(1);
@@ -32,9 +34,15 @@ public class NioCaller {
 
     private ByteBuffer readBuf = ByteBuffer.allocate(8192)  ;
 
-    public NioCaller(String host, int port, NioCallerConsumer n) {
-        remoteHost = host;
-        remotePort = port;
+    public NioCaller(String remotehost,
+                     int remoteport,
+                     String localhost,
+                     int localport,
+                     NioCallerConsumer n) {
+        this.remoteHost = remotehost;
+        this.remotePort = remoteport;
+        this.localhost = localhost;
+        this.localPort = localport;
         nioCallerConsumer = n;
     }
 
@@ -142,20 +150,26 @@ public class NioCaller {
             return ;
         }
 
-        int n = clientChannel.write(b) ;
-        // LOG.info("Wrote bytes " + n) ;
-        int totalbyteswritten = n ;
-        while (n > 0 && b.remaining() > 0) {
-            n = clientChannel.write(b) ;
-            //   LOG.info("Wrote bytes " + n) ;
-            totalbyteswritten = totalbyteswritten + n ;
+        try {
+            int n = clientChannel.write(b);
+            // LOG.info("Wrote bytes " + n) ;
+            int totalbyteswritten = n;
+            while (n > 0 && b.remaining() > 0) {
+                n = clientChannel.write(b);
+                //   LOG.info("Wrote bytes " + n) ;
+                totalbyteswritten = totalbyteswritten + n;
 
+            }
+            key.interestOps(SelectionKey.OP_READ);
+        } catch(IOException e) {
+            clientChannel.close() ;
+            key.cancel();
+            String remote = remoteHost +":"+remotePort ;
+            String local = localhost + ":"+ localPort;
+            LOG.info(local +" :remote"+ remote + " has closed the connection") ;
+            // peerServer.removePeer(s);
+            nioCallerConsumer.droppedConnection(clientChannel);
         }
-
-
-        // LOG.info("Wrote bytes " + totalbyteswritten) ;
-
-        key.interestOps(SelectionKey.OP_READ) ;
     }
 
     public void read(SelectionKey key) throws IOException {

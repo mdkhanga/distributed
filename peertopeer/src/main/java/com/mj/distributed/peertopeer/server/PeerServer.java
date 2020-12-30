@@ -10,6 +10,7 @@ import com.mj.distributed.message.Message;
 import com.mj.distributed.model.ClusterInfo;
 import com.mj.distributed.model.Member;
 import com.mj.distributed.model.RaftState;
+import com.mj.distributed.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -320,7 +321,8 @@ public class PeerServer implements NioListenerConsumer {
             // LOG.info("No entry") ;
         }
 
-        if (lastComittedIndex < rlog.size()) {
+        if (lastComittedIndex < rlog.size() && lastComittedIndex > this.lastComittedIndex.get()) {
+            LOG.info("Setting committed index to "+lastComittedIndex);
             this.lastComittedIndex.set(lastComittedIndex);
         }
 
@@ -655,7 +657,7 @@ public class PeerServer implements NioListenerConsumer {
         sb.append("]") ;
 
         LOG.info(sb.toString()) ;
-        LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
+        // LOG.info("Committed index = " + String.valueOf(lastComittedIndex));
 
     }
 
@@ -682,21 +684,20 @@ public class PeerServer implements NioListenerConsumer {
 
         ConcurrentLinkedQueue<Integer> indexQueue = ackCountMap.get(index) ;
         if (indexQueue == null) {
-            // already committed
-            // LOG.info("No Ack queue. Already comitted") ;
             return ;
         }
 
         indexQueue.add(1) ;
-        // LOG.info("Incrementing index q") ;
 
-        // if (indexQueue.size() >= members.size()/2 ) {
-        if (indexQueue.size() >= connectedMembersMap.size()/2 ) {
+        int majority = Utils.majority(members.size());
+        // if (indexQueue.size() >= connectedMembersMap.size()/2 ) {
+        if (indexQueue.size() >= majority ) {
             lastComittedIndex.set(index) ;
             ackCountMap.remove(index) ;
-            // LOG.info("Got enough votes " + indexQueue.size() + "---" + connectedMembersMap.size()/2 );
+            LOG.info("Last committed index="+lastComittedIndex.get());
         } else {
            //  LOG.info("Not enough votes " + indexQueue.size() + "---" + connectedMembersMap.size()/2 );
         }
     }
 }
+

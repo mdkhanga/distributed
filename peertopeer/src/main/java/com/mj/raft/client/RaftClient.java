@@ -26,7 +26,7 @@ public class RaftClient implements NioCallerConsumer {
 
     public void connect() throws Exception {
 
-        nioCaller = new NioCaller(hostString, port, this);
+        nioCaller = new NioCaller(hostString, port, "raftclient",-1,this);
         nioCaller.start();
         RaftClientHello hello = new RaftClientHello();
         nioCaller.queueSendMessage(hello.serialize());

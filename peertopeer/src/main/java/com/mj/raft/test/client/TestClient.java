@@ -34,7 +34,7 @@ public class TestClient implements NioCallerConsumer {
 
     public void connect() throws Exception {
 
-        nioCaller = new NioCaller(hostString, port, this);
+        nioCaller = new NioCaller(hostString, port, "testclient", -1,this);
         nioCaller.start();
         TestClientHello hello = new TestClientHello();
         messageWaitingResponse = 0 ;

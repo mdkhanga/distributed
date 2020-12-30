@@ -75,7 +75,7 @@ public class RequestVoteMessage implements Message {
         retBuffer.putInt(requestVoteMsgArray.length);
         retBuffer.put(requestVoteMsgArray);
         int l = requestVoteMsgArray.length+4 ;
-        LOG.info("request vote msg len = " + l) ;
+        // LOG.info("request vote msg len = " + l) ;
 
         retBuffer.flip() ; // make it ready for reading
 
@@ -85,7 +85,7 @@ public class RequestVoteMessage implements Message {
     public static RequestVoteMessage deserialize(ByteBuffer readBuffer) throws Exception {
 
         int messagesize = readBuffer.getInt() ;
-        LOG.info("Received message of size " + messagesize) ;
+        // LOG.info("Received message of size " + messagesize) ;
         int type = readBuffer.getInt() ;
         if (type != messageType.value()) {
 

@@ -180,6 +180,9 @@ public class NioListener {
                 throw new IOException("Read returned -1. Channel closed by client.") ;
 
             }
+            readBuffer.rewind() ;
+            nioListenerConsumer.consumeMessage(sc, totalread, readBuffer);
+
         } catch(IOException e) {
 
             sc.close() ;
@@ -194,9 +197,8 @@ public class NioListener {
             channelMessagesToWriteMap.remove(sc);
         }
 
-        readBuffer.rewind() ;
-
-        nioListenerConsumer.consumeMessage(sc, totalread, readBuffer);
+        // readBuffer.rewind() ;
+        // nioListenerConsumer.consumeMessage(sc, totalread, readBuffer);
     }
 
     private void write(SelectionKey key) throws IOException {
