@@ -24,7 +24,11 @@ public class LogEntry {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(out);
         d.writeInt(index);
-        d.write(entry);
+        int size = entry.length;
+        d.writeInt(size);
+        if (size > 0) {
+            d.write(entry);
+        }
         byte[] ret = out.toByteArray();
         out.close();
         d.close();
@@ -36,8 +40,14 @@ public class LogEntry {
         ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
         DataInputStream din = new DataInputStream(bin);
         int index = din.readInt() ;
-        // byte[] v = din.readAllBytes() ;
-        int v = din.readInt();
+        // int v = din.readInt();
+        int size = din.readInt();
+
+        byte[] v = new byte[size];
+
+        if (size > 0) {
+            din.read(v,0, size);
+        }
 
         return new LogEntry(index, v);
 
